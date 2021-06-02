@@ -273,7 +273,7 @@ class PTVSlowFast(nn.Module):
         # Number of stages = 4
         stage_dim_in = cfg.RESNET.WIDTH_PER_GROUP * 2**(4+1)
         head_in_features = stage_dim_in
-        for reduction_ratio in range(1,cfg.SLOWFAST.BETA_INV):
+        for reduction_ratio in cfg.SLOWFAST.BETA_INV:
             head_in_features = head_in_features + stage_dim_in // reduction_ratio
 
         if cfg.DETECTION.ENABLE:
