@@ -110,7 +110,8 @@ def train_epoch(
                 loss = loss.item()
             else:
                 # Compute the errors.
-                num_topks_correct = metrics.topks_correct(preds, labels, (1, 5))
+                k = min(cfg.MODEL.NUM_CLASSES, 5) # in case there aren't at least 5 classes in the dataset
+                num_topks_correct = metrics.topks_correct(preds, labels, (1, k))
                 top1_err, top5_err = [
                     (1.0 - x / preds.size(0)) * 100.0 for x in num_topks_correct
                 ]
@@ -223,7 +224,8 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None):
                     preds, labels = du.all_gather([preds, labels])
             else:
                 # Compute the errors.
-                num_topks_correct = metrics.topks_correct(preds, labels, (1, 5))
+                k = min(cfg.MODEL.NUM_CLASSES, 5) # in case there aren't at least 5 classes in the dataset
+                num_topks_correct = metrics.topks_correct(preds, labels, (1, k))
 
                 # Combine the errors across the GPUs.
                 top1_err, top5_err = [

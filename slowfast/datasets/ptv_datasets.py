@@ -624,6 +624,7 @@ def Ptvfishbase(cfg, mode):
     path_to_dir = os.path.join(
         cfg.DATA.PATH_TO_DATA_DIR, mode
     )
+
     labeled_video_paths = LabeledVideoPaths.from_directory(path_to_dir)
     num_videos = len(labeled_video_paths)
     labeled_video_paths.path_prefix = cfg.DATA.PATH_PREFIX
@@ -680,7 +681,7 @@ def Ptvfishbase(cfg, mode):
                             UniformTemporalSubsample(cfg.DATA.NUM_FRAMES),
                             Lambda(div255),
                             NormalizeVideo(cfg.DATA.MEAN, cfg.DATA.STD),
-                            ShortSideScale(
+                             ShortSideScale(
                                 size=cfg.DATA.TRAIN_JITTER_SCALES[0]
                             ),
                         ]

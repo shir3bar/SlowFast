@@ -247,7 +247,7 @@ class PTVSlowFast(nn.Module):
 
         # Params from configs.
         norm_module = get_norm(cfg)
-        pool_size = _POOL1[cfg.MODEL.ARCH]
+        pool_size = _POOL1[cfg.MODEL.ARCH] #[[1,1,1],[1,1,1]]
         num_groups = cfg.RESNET.NUM_GROUPS
         width_per_group = cfg.RESNET.WIDTH_PER_GROUP
         spatial_dilations = cfg.RESNET.SPATIAL_DILATIONS

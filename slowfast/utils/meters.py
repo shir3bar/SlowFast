@@ -269,6 +269,7 @@ class TestMeter(object):
         self.ensemble_method = ensemble_method
         # Initialize tensors.
         self.video_preds = torch.zeros((num_videos, num_cls))
+        self.num_cls = num_cls
         if multi_label:
             self.video_preds -= 1e10
 
@@ -389,6 +390,8 @@ class TestMeter(object):
             )
             self.stats["map"] = map
         else:
+            k = min(self.num_cls,5)
+            ks = (1,k)
             num_topks_correct = metrics.topks_correct(
                 self.video_preds, self.video_labels, ks
             )
