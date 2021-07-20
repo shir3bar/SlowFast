@@ -119,7 +119,7 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None):
         if cfg.NUM_GPUS:
             all_preds = all_preds.cpu()
             all_labels = all_labels.cpu()
-        if writer is not None:
+        if writer is not None and (cfg.MODEL.MODEL_NAME != "PTVResNetAutoencoder"):
             writer.plot_eval(preds=all_preds, labels=all_labels)
 
         if cfg.TEST.SAVE_RESULTS_PATH != "":

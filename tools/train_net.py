@@ -76,7 +76,10 @@ def train_epoch(
         loss_fun = losses.get_loss_func(cfg.MODEL.LOSS_FUNC)(reduction="mean")
 
         # Compute the loss.
-        loss = loss_fun(preds, labels)
+        if cfg.MODEL.MODEL_NAME == 'PTVResNetAutoencoder':
+            loss = loss_fun(preds, inputs[0])
+        else:
+            loss = loss_fun(preds, labels)
 
         # check Nan Loss.
         misc.check_nan_losses(loss)
@@ -107,6 +110,13 @@ def train_epoch(
                 # Gather all the predictions across all the devices.
                 if cfg.NUM_GPUS > 1:
                     [loss] = du.all_reduce([loss])
+                loss = loss.item()
+            elif cfg.MODEL.MODEL_NAME == 'PTVResNetAutoencoder':
+                #calc reconstruction error as mse between input and output
+                with torch.no_grad():
+                    recon_err = ((inputs[0]-preds)**2).mean()
+                top1_err = recon_err.item()
+                top5_err = 0.0
                 loss = loss.item()
             else:
                 # Compute the errors.
@@ -222,6 +232,13 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None):
             if cfg.DATA.MULTI_LABEL:
                 if cfg.NUM_GPUS > 1:
                     preds, labels = du.all_gather([preds, labels])
+
+            elif cfg.MODEL.MODEL_NAME == 'PTVResNetAutoencoder':
+                #calc reconstruction error as mse between input and output
+                with torch.no_grad():
+                    recon_err = ((inputs[0]-preds)**2).mean()
+                top1_err = recon_err.item()
+                top5_err = 0.0
             else:
                 # Compute the errors.
                 k = min(cfg.MODEL.NUM_CLASSES, 5) # in case there aren't at least 5 classes in the dataset
@@ -239,7 +256,7 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None):
 
                 val_meter.iter_toc()
                 # Update and log stats.
-                val_meter.update_stats(
+            val_meter.update_stats(
                     top1_err,
                     top5_err,
                     inputs[0].size(0)
@@ -248,13 +265,13 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None):
                     ),  # If running  on CPU (cfg.NUM_GPUS == 1), use 1 to represent 1 CPU.
                 )
                 # write to tensorboard format if available.
-                if writer is not None:
-                    writer.add_scalars(
+            if writer is not None:
+                writer.add_scalars(
                         {"Val/Top1_err": top1_err, "Val/Top5_err": top5_err},
                         global_step=len(val_loader) * cur_epoch + cur_iter,
                     )
-
-            val_meter.update_predictions(preds, labels)
+            if cfg.MODEL.MODEL_NAME != "PTVResNetAutoencoder":
+                val_meter.update_predictions(preds, labels)
 
         val_meter.log_iter_stats(cur_epoch, cur_iter)
         val_meter.iter_tic()
@@ -267,7 +284,7 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None):
             writer.add_scalars(
                 {"Val/mAP": val_meter.full_map}, global_step=cur_epoch
             )
-        else:
+        elif cfg.MODEL.MODEL_NAME != "PTVResNetAutoencoder":
             all_preds = [pred.clone().detach() for pred in val_meter.all_preds]
             all_labels = [
                 label.clone().detach() for label in val_meter.all_labels
@@ -378,7 +395,6 @@ def train(cfg):
     # Print config.
     logger.info("Train with config:")
     logger.info(pprint.pformat(cfg))
-
     # Build the video model and print model statistics.
     model = build_model(cfg)
     if du.is_master_proc() and cfg.LOG_MODEL_INFO:
