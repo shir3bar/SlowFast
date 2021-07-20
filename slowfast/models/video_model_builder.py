@@ -53,6 +53,13 @@ _TEMPORAL_KERNEL_BASIS = {
         [[3]],  # res4 temporal kernel.
         [[3]],  # res5 temporal kernel.
     ],
+    "fast": [
+        [[5]],  # conv1 temporal kernel.
+        [[3]],  # res2 temporal kernel.
+        [[3]],  # res3 temporal kernel.
+        [[3]],  # res4 temporal kernel.
+        [[3]],  # res5 temporal kernel.
+    ],
     "slowfast": [
         [[1], [5]],  # conv1 temporal kernel for slow and fast pathway.
         [[1], [3]],  # res2 temporal kernel for slow and fast pathway.
@@ -75,6 +82,7 @@ _POOL1 = {
     "i3d": [[2, 1, 1]],
     "i3d_nopool": [[1, 1, 1]],
     "slow": [[1, 1, 1]],
+    "fast": [[1, 1, 1]],
     "slowfast": [[1, 1, 1], [1, 1, 1]],
     "x3d": [[1, 1, 1]],
 }

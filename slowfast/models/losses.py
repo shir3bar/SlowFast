@@ -9,6 +9,8 @@ _LOSSES = {
     "cross_entropy": nn.CrossEntropyLoss,
     "bce": nn.BCELoss,
     "bce_logit": nn.BCEWithLogitsLoss,
+    "l1": nn.L1Loss,
+    "mse": nn.MSELoss,
 }
 
 

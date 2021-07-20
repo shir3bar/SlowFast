@@ -1,5 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-
+import cv2
+import numpy
+numpy.random.normal()
 import functools
 import os
 from typing import Dict
@@ -138,6 +140,17 @@ def div255(x):
     """
     return x / 255.0
 
+def rgb2gray(x):
+    """
+    Convert clip frames from RGB mode to BRG mode.
+    Args:
+        x (Tensor): A tensor of the clip's RGB frames with shape:
+            (channel, time, height, width).
+
+    Returns:
+        x (Tensor): Converted tensor
+    """
+    return x[[0], ...]
 
 @DATASET_REGISTRY.register()
 def Ptvkinetics(cfg, mode):
@@ -616,7 +629,7 @@ def Ptvfishbase(cfg, mode):
         "test",
     ], "Split '{}' not supported".format(mode)
 
-    logger.info("Constructing Ptvkfishbase {}...".format(mode))
+    logger.info("Constructing Ptvfishbase {}...".format(mode))
 
     clip_duration = (
         cfg.DATA.NUM_FRAMES * cfg.DATA.SAMPLING_RATE / cfg.DATA.TARGET_FPS
@@ -649,6 +662,11 @@ def Ptvfishbase(cfg, mode):
                             NormalizeVideo(cfg.DATA.MEAN, cfg.DATA.STD),
                             ShortSideScale(cfg.DATA.TRAIN_JITTER_SCALES[0]),
                         ]
+                        + (
+                            [Lambda(rgb2gray)]
+                            if cfg.DATA.INPUT_CHANNEL_NUM[0] == 1
+                            else []
+                        )
                         + (
                             [RandomHorizontalFlipVideo(p=0.5)]
                             if cfg.DATA.RANDOM_FLIP
