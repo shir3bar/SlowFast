@@ -8,7 +8,7 @@ TRAIN:
 DATA:
   NUM_FRAMES: 32
   SAMPLING_RATE: 2
-  PATH_TO_DATA_DIR: '/media/shirbar/DATA/Fishbase/New_DB/photos/small_classification_large_test_both_feed'#small_classification' #_large_test/'
+  PATH_TO_DATA_DIR: '/media/shirbar/DATA/Fishbase/New_DB/photos/small_classification_large_test_both_feed_dist'#small_classification' #_large_test/'
   TRAIN_JITTER_SCALES: [256]
   TRAIN_CROP_SIZE: 256
   TEST_CROP_SIZE: 256
@@ -65,6 +65,6 @@ DATA_LOADER:
 NUM_GPUS: 1
 NUM_SHARDS: 1
 RNG_SEED: 0
-OUTPUT_DIR: '/media/shirbar/DATA/Fishbase/SlowFastTrials/single_cycle_classifier/'
+OUTPUT_DIR: '/media/shirbar/DATA/Fishbase/SlowFastTrials/dist_classifier/'
 TENSORBOARD:
   ENABLE: True

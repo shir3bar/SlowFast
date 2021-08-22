@@ -25,7 +25,7 @@ from pytorchvideo.models.x3d import (
 from pytorchvideo.models.head import create_res_basic_head, create_res_roi_pooling_head
 from detectron2.layers import ROIAlign
 from .build import MODEL_REGISTRY
-
+from .ae_helper import create_resnet_encoder, create_resnet_decoder, ResNetAutoencoder
 
 def get_head_act(act_func):
     """
@@ -74,6 +74,7 @@ class PTVResNet(nn.Module):
         assert cfg.MODEL.ARCH in [
             "c2d",
             "slow",
+            "fast",
             "i3d",
         ], f"Unsupported MODEL.ARCH type {cfg.MODEL.ARCH} for PTVResNet"
 
@@ -212,6 +213,7 @@ class PTVResNet(nn.Module):
         return x
 
 
+
 @MODEL_REGISTRY.register()
 class PTVSlowFast(nn.Module):
     def __init__(self, cfg):
@@ -247,7 +249,7 @@ class PTVSlowFast(nn.Module):
 
         # Params from configs.
         norm_module = get_norm(cfg)
-        pool_size = _POOL1[cfg.MODEL.ARCH]
+        pool_size = _POOL1[cfg.MODEL.ARCH] #[[1,1,1],[1,1,1]]
         num_groups = cfg.RESNET.NUM_GROUPS
         width_per_group = cfg.RESNET.WIDTH_PER_GROUP
         spatial_dilations = cfg.RESNET.SPATIAL_DILATIONS
@@ -273,7 +275,7 @@ class PTVSlowFast(nn.Module):
         # Number of stages = 4
         stage_dim_in = cfg.RESNET.WIDTH_PER_GROUP * 2**(4+1)
         head_in_features = stage_dim_in
-        for reduction_ratio in cfg.SLOWFAST.BETA_INV:
+        for reduction_ratio in range(1,cfg.SLOWFAST.BETA_INV):
             head_in_features = head_in_features + stage_dim_in // reduction_ratio
 
         if cfg.DETECTION.ENABLE:
@@ -690,4 +692,328 @@ class PTVR2plus1D(nn.Module):
             x = x.mean([2, 3, 4])
 
         x = x.view(x.shape[0], -1)
+        return x
+
+@MODEL_REGISTRY.register()
+class PTVResNetAutoencoder(nn.Module):
+    """
+    ResNet models using PyTorchVideo model builder.
+    """
+
+    def __init__(self, cfg):
+        super(PTVResNetAutoencoder, self).__init__()
+        assert (
+            cfg.RESNET.STRIDE_1X1 is False
+        ), "STRIDE_1x1 must be True for PTVResNet"
+        assert (
+            cfg.RESNET.TRANS_FUNC == "bottleneck_transform"
+        ), f"Unsupported TRANS_FUNC type {cfg.RESNET.TRANS_FUNC} for PTVResNet"
+        assert cfg.MODEL.ARCH in [
+            "c2d",
+            "slow",
+            "fast",
+            "i3d",
+        ], f"Unsupported MODEL.ARCH type {cfg.MODEL.ARCH} for PTVResNet"
+        self._construct_network(cfg)
+
+    def _construct_network(self,cfg):
+        # Params from configs.
+        norm_module = get_norm(cfg)
+        head_act = get_head_act(cfg.MODEL.HEAD_ACT)
+        pool_size = _POOL1[cfg.MODEL.ARCH]
+        num_groups = cfg.RESNET.NUM_GROUPS
+        spatial_dilations = cfg.RESNET.SPATIAL_DILATIONS
+        spatial_strides = cfg.RESNET.SPATIAL_STRIDES
+        temp_kernel = _TEMPORAL_KERNEL_BASIS[cfg.MODEL.ARCH]
+        stage1_pool = pool_size[0][0] != 1 or len(set(pool_size[0])) > 1
+        stage_spatial_stride = (
+            spatial_strides[0][0],
+            spatial_strides[1][0],
+            spatial_strides[2][0],
+            spatial_strides[3][0],
+        )
+        stage_decoder_spatial_stride = (
+            spatial_strides[-1][0],
+            spatial_strides[-2][0],
+            spatial_strides[-3][0],
+            spatial_strides[-4][0],
+        )
+        if cfg.MODEL.ARCH == "i3d":
+            stage_conv_a_kernel_size = (
+                (3, 1, 1),
+                [(3, 1, 1), (1, 1, 1)],
+                [(3, 1, 1), (1, 1, 1)],
+                [(1, 1, 1), (3, 1, 1)],
+            )
+        else:
+            stage_conv_a_kernel_size = (
+                (temp_kernel[1][0][0], 1, 1),
+                (temp_kernel[2][0][0], 1, 1),
+                (temp_kernel[3][0][0], 1, 1),
+                (temp_kernel[4][0][0], 1, 1),
+            )
+
+        resnet = create_resnet_encoder(
+            # Input clip configs.
+            input_channel=cfg.DATA.INPUT_CHANNEL_NUM[0],
+
+            # Model configs.
+            model_depth=18,#cfg.RESNET.DEPTH,
+            model_num_class=cfg.MODEL.NUM_CLASSES,
+            dropout_rate=cfg.MODEL.DROPOUT_RATE,
+            # Normalization configs.
+            norm=norm_module,
+            # Activation configs.
+            activation=partial(nn.ReLU, inplace=cfg.RESNET.INPLACE_RELU),
+            # Stem configs.
+            stem_dim_out=cfg.RESNET.WIDTH_PER_GROUP,
+            stem_conv_kernel_size=(temp_kernel[0][0][0], 7,7),
+            stem_conv_stride=(1, 2, 2),
+            stem_pool=nn.MaxPool3d,
+            stem_pool_kernel_size=(1,3, 3),
+            stem_pool_stride=(1, 2, 2),
+            # Stage configs.
+            stage1_pool=nn.MaxPool3d if stage1_pool else None,
+            stage1_pool_kernel_size=pool_size[0],
+            stage_conv_a_kernel_size=stage_conv_a_kernel_size,
+            stage_conv_b_kernel_size=(
+                (1, 3, 3),
+                (1, 3, 3),
+                (1, 3, 3),
+                (1, 3, 3),
+            ),
+            stage_conv_b_num_groups=(
+                num_groups,
+                num_groups,
+                num_groups,
+                num_groups,
+            ),
+            stage_conv_b_dilation=(
+                (1, spatial_dilations[0][0], spatial_dilations[0][0]),
+                (1, spatial_dilations[1][0], spatial_dilations[1][0]),
+                (1, spatial_dilations[2][0], spatial_dilations[2][0]),
+                (1, spatial_dilations[3][0], spatial_dilations[3][0]),
+            ),
+            stage_spatial_h_stride=stage_spatial_stride,
+            stage_spatial_w_stride=stage_spatial_stride,
+            stage_temporal_stride=(1, 1, 1, 1),
+            bottleneck=create_bottleneck_block,
+            # Head configs.
+            head=None,#create_encoder_head,
+            head_pool=nn.AvgPool3d,
+            head_pool_kernel_size=(
+                cfg.DATA.NUM_FRAMES // (pool_size[0][0]*2),
+                cfg.DATA.TRAIN_CROP_SIZE // 32 // (pool_size[0][1]*2),
+                cfg.DATA.TRAIN_CROP_SIZE // 32 // (pool_size[0][2]*2),
+            ),
+            head_output_size=(2,2,2),
+            head_activation=None,
+            conv=nn.Conv3d
+        )
+        self.model = ResNetAutoencoder(resnet, [1, 1, 1, 1],n_channels=cfg.DATA.INPUT_CHANNEL_NUM[0])
+
+    def forward(self, x):
+        x = x[0]
+        x = self.model(x)[1] #get just x for training, not z
+        return x
+
+
+
+class PTVResNetAutoencoder2(nn.Module):
+    """
+    ResNet models using PyTorchVideo model builder.
+    """
+
+    def __init__(self, cfg):
+        """
+        The `__init__` method of any subclass should also contain these
+            arguments.
+
+        Args:
+            cfg (CfgNode): model building configs, details are in the
+                comments of the config file.
+        """
+        super(PTVResNetAutoencoder2, self).__init__()
+
+        assert (
+            cfg.RESNET.STRIDE_1X1 is False
+        ), "STRIDE_1x1 must be True for PTVResNet"
+        assert (
+            cfg.RESNET.TRANS_FUNC == "bottleneck_transform"
+        ), f"Unsupported TRANS_FUNC type {cfg.RESNET.TRANS_FUNC} for PTVResNet"
+        assert cfg.MODEL.ARCH in [
+            "c2d",
+            "slow",
+            "fast",
+            "i3d",
+        ], f"Unsupported MODEL.ARCH type {cfg.MODEL.ARCH} for PTVResNet"
+
+        self.detection_mode =  cfg.DETECTION.ENABLE
+        self._construct_network(cfg)
+
+    def _construct_network(self, cfg):
+        """
+        Builds a single pathway ResNet model.
+
+        Args:
+            cfg (CfgNode): model building configs, details are in the
+                comments of the config file.
+        """
+
+        # Params from configs.
+        norm_module = get_norm(cfg)
+        head_act = get_head_act(cfg.MODEL.HEAD_ACT)
+        pool_size = _POOL1[cfg.MODEL.ARCH]
+        num_groups = cfg.RESNET.NUM_GROUPS
+        spatial_dilations = cfg.RESNET.SPATIAL_DILATIONS
+        spatial_strides = cfg.RESNET.SPATIAL_STRIDES
+        temp_kernel = _TEMPORAL_KERNEL_BASIS[cfg.MODEL.ARCH]
+        stage1_pool = pool_size[0][0] != 1 or len(set(pool_size[0])) > 1
+        stage_spatial_stride = (
+            spatial_strides[0][0],
+            spatial_strides[1][0],
+            spatial_strides[2][0],
+            spatial_strides[3][0],
+        )
+        stage_decoder_spatial_stride = (
+            spatial_strides[-1][0],
+            spatial_strides[-2][0],
+            spatial_strides[-3][0],
+            spatial_strides[-4][0],
+        )
+        if cfg.MODEL.ARCH == "i3d":
+            stage_conv_a_kernel_size = (
+                (3, 1, 1),
+                [(3, 1, 1), (1, 1, 1)],
+                [(3, 1, 1), (1, 1, 1)],
+                [(1, 1, 1), (3, 1, 1)],
+            )
+        else:
+            stage_conv_a_kernel_size = (
+                (temp_kernel[1][0][0], 1, 1),
+                (temp_kernel[2][0][0], 1, 1),
+                (temp_kernel[3][0][0], 1, 1),
+                (temp_kernel[4][0][0], 1, 1),
+            )
+
+        self.encoder = create_resnet_encoder(
+            # Input clip configs.
+            input_channel=cfg.DATA.INPUT_CHANNEL_NUM[0],
+
+            # Model configs.
+            model_depth=cfg.RESNET.DEPTH,
+            model_num_class=cfg.MODEL.NUM_CLASSES,
+            dropout_rate=cfg.MODEL.DROPOUT_RATE,
+            # Normalization configs.
+            norm=norm_module,
+            # Activation configs.
+            activation=partial(nn.ReLU, inplace=cfg.RESNET.INPLACE_RELU),
+            # Stem configs.
+            stem_dim_out=cfg.RESNET.WIDTH_PER_GROUP,
+            stem_conv_kernel_size=(temp_kernel[0][0][0], 7, 7),
+            stem_conv_stride=(1, 2, 2),
+            stem_pool=nn.MaxPool3d,
+            stem_pool_kernel_size=(1, 3, 3),
+            stem_pool_stride=(1, 2, 2),
+            # Stage configs.
+            stage1_pool=nn.MaxPool3d if stage1_pool else None,
+            stage1_pool_kernel_size=pool_size[0],
+            stage_conv_a_kernel_size=stage_conv_a_kernel_size,
+            stage_conv_b_kernel_size=(
+                (1, 3, 3),
+                (1, 3, 3),
+                (1, 3, 3),
+                (1, 3, 3),
+            ),
+            stage_conv_b_num_groups=(
+                num_groups,
+                num_groups,
+                num_groups,
+                num_groups,
+            ),
+            stage_conv_b_dilation=(
+                (1, spatial_dilations[0][0], spatial_dilations[0][0]),
+                (1, spatial_dilations[1][0], spatial_dilations[1][0]),
+                (1, spatial_dilations[2][0], spatial_dilations[2][0]),
+                (1, spatial_dilations[3][0], spatial_dilations[3][0]),
+            ),
+            stage_spatial_h_stride=stage_spatial_stride,
+            stage_spatial_w_stride=stage_spatial_stride,
+            stage_temporal_stride=(1, 1, 1, 1),
+            bottleneck=create_bottleneck_block,
+            # Head configs.
+            head_pool=nn.AvgPool3d,
+            head_pool_kernel_size=(
+                cfg.DATA.NUM_FRAMES // pool_size[0][0],
+                cfg.DATA.TRAIN_CROP_SIZE // 32 // pool_size[0][1],
+                cfg.DATA.TRAIN_CROP_SIZE // 32 // pool_size[0][2],
+            ),
+            head_activation=None,
+            conv=nn.Conv3d
+        )
+
+        self.decoder = create_resnet_decoder(
+            # Input clip configs.
+            input_channel=cfg.DATA.INPUT_CHANNEL_NUM[0],
+
+            # Model configs.
+            model_depth=cfg.RESNET.DEPTH,
+            z_dim=256,
+            model_num_class=cfg.MODEL.NUM_CLASSES,
+            dropout_rate=cfg.MODEL.DROPOUT_RATE,
+            # Normalization configs.
+            norm=norm_module,
+            # Activation configs.
+            activation=partial(nn.ReLU, inplace=cfg.RESNET.INPLACE_RELU),
+            # Stem configs.
+            stem_dim_out=cfg.RESNET.WIDTH_PER_GROUP,
+            stem_conv_kernel_size=(temp_kernel[0][0][0], 6, 6),
+            stem_conv_stride=(1, 2, 2),
+            stem_conv_padding=(2,2,2),
+            stem_pool=nn.Upsample,
+            stem_pool_kernel_size=(32, 128, 128),
+            stem_pool_stride=(1, 1, 1),
+            # Stage configs.
+            stage1_pool=nn.MaxPool3d if stage1_pool else None,
+            stage1_pool_kernel_size=pool_size[0],
+            stage_conv_a_kernel_size=stage_conv_a_kernel_size,
+            stage_conv_b_kernel_size=(
+                (1, 3, 3),
+                (1, 3, 3),
+                (1, 3, 3),
+                (1, 3, 3),
+            ),
+            stage_conv_b_num_groups=(
+                num_groups,
+                num_groups,
+                num_groups,
+                num_groups,
+            ),
+            stage_conv_b_dilation=(
+                (1, spatial_dilations[0][0], spatial_dilations[0][0]),
+                (1, spatial_dilations[1][0], spatial_dilations[1][0]),
+                (1, spatial_dilations[2][0], spatial_dilations[2][0]),
+                (1, spatial_dilations[3][0], spatial_dilations[3][0]),
+            ),
+            stage_spatial_h_stride=stage_decoder_spatial_stride,
+            stage_spatial_w_stride=stage_decoder_spatial_stride,
+            stage_temporal_stride=(1, 1, 1, 1),
+            bottleneck=create_bottleneck_block,
+            # Head configs.
+            head=None,
+            head_pool=nn.AvgPool3d,
+            head_pool_kernel_size=(
+                cfg.DATA.NUM_FRAMES // pool_size[0][0],
+                cfg.DATA.TRAIN_CROP_SIZE // 32 // pool_size[0][1],
+                cfg.DATA.TRAIN_CROP_SIZE // 32 // pool_size[0][2],
+            ),
+            head_activation=None,
+            head_output_with_global_average=False,
+            conv=nn.ConvTranspose3d
+        )
+
+    def forward(self, x, bboxes=None):
+        x = x[0]
+        x = self.encoder(x)
+        x = self.decoder(x)
         return x

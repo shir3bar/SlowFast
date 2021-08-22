@@ -88,7 +88,7 @@ def _get_model_analysis_input(cfg, use_train_input):
     Returns:
         inputs: the input for model analysis.
     """
-    rgb_dimension = 3
+    rgb_dimension = cfg.DATA.INPUT_CHANNEL_NUM[0]
     if use_train_input:
         input_tensors = torch.rand(
             rgb_dimension,

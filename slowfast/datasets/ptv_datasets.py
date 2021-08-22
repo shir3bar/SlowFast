@@ -659,7 +659,7 @@ def Ptvfishbase(cfg, mode):
                         [
                             UniformTemporalSubsample(cfg.DATA.NUM_FRAMES),
                             Lambda(div255),
-                            NormalizeVideo(cfg.DATA.MEAN, cfg.DATA.STD),
+                            #NormalizeVideo(cfg.DATA.MEAN, cfg.DATA.STD),
                             ShortSideScale(cfg.DATA.TRAIN_JITTER_SCALES[0]),
                         ]
                         + (
@@ -698,11 +698,16 @@ def Ptvfishbase(cfg, mode):
                         [
                             UniformTemporalSubsample(cfg.DATA.NUM_FRAMES),
                             Lambda(div255),
-                            NormalizeVideo(cfg.DATA.MEAN, cfg.DATA.STD),
+                            #NormalizeVideo(cfg.DATA.MEAN, cfg.DATA.STD),
                              ShortSideScale(
                                 size=cfg.DATA.TRAIN_JITTER_SCALES[0]
                             ),
                         ]
+                        + (
+                            [Lambda(rgb2gray)]
+                            if cfg.DATA.INPUT_CHANNEL_NUM[0] == 1
+                            else []
+                        )
                     ),
                 ),
                 ApplyTransformToKey(key="video", transform=PackPathway(cfg)),

@@ -1,14 +1,15 @@
 TRAIN:
   ENABLE: True
   DATASET: ptvfishbase
-  BATCH_SIZE: 4
+  BATCH_SIZE: 1
   EVAL_PERIOD: 10
   CHECKPOINT_PERIOD: 10
   AUTO_RESUME: True
 DATA:
   NUM_FRAMES: 32
   SAMPLING_RATE: 2
-  PATH_TO_DATA_DIR: '/media/shirbar/DATA/Fishbase/New_DB/photos/db_220221_200frms/'#small_classification/'
+  PATH_TO_DATA_DIR: '/media/shirbar/DATA/Fishbase/New_DB/photos/small_swim_dist/'
+
   TRAIN_JITTER_SCALES: [256]
   TRAIN_CROP_SIZE: 256
   TEST_CROP_SIZE: 256
@@ -17,7 +18,7 @@ RESNET:
   ZERO_INIT_FINAL_BN: True
   WIDTH_PER_GROUP: 8
   NUM_GROUPS: 1
-  DEPTH: 50
+  DEPTH: 18
   TRANS_FUNC: bottleneck_transform
   STRIDE_1X1: False
   NUM_BLOCK_TEMP_KERNEL: [[1], [1], [1], [1]]
@@ -29,17 +30,17 @@ BN:
   USE_PRECISE_STATS: False
   NUM_BATCHES_PRECISE: 200
 SOLVER:
-  BASE_LR: 0.01 # 1-node
+  BASE_LR: 0.1 # 1-node
   BASE_LR_SCALE_NUM_SHARDS: True
   LR_POLICY: cosine
-  COSINE_END_LR: 0.0001
-  STEP_SIZE: 10
-  MAX_EPOCH: 56
+  #COSINE_END_LR: 0.0001
+  #STEP_SIZE: 10
+  MAX_EPOCH: 250
   MOMENTUM: 0.9
   WEIGHT_DECAY: 1e-4
   WARMUP_EPOCHS: 34.0
-  WARMUP_START_LR: 0.001
-  OPTIMIZING_METHOD: adam
+  WARMUP_START_LR: 0.01
+  OPTIMIZING_METHOD: sgd
 MODEL:
   NUM_CLASSES: 1
   ARCH: fast
@@ -58,6 +59,6 @@ DATA_LOADER:
 NUM_GPUS: 1
 NUM_SHARDS: 1
 RNG_SEED: 0
-OUTPUT_DIR: '/media/shirbar/DATA/Fishbase/SlowFastTrials/unet_db220221/'
+OUTPUT_DIR: '/media/shirbar/DATA/Fishbase/SlowFastTrials/resnet_autoencoder_512x1x1x1'
 TENSORBOARD:
   ENABLE: True

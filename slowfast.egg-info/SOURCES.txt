@@ -26,6 +26,7 @@ slowfast/datasets/transform.py
 slowfast/datasets/utils.py
 slowfast/datasets/video_container.py
 slowfast/models/__init__.py
+slowfast/models/ae_helper.py
 slowfast/models/batchnorm_helper.py
 slowfast/models/build.py
 slowfast/models/custom_video_model_builder.py
@@ -77,3 +78,11 @@ slowfast/visualization/predictor.py
 slowfast/visualization/tensorboard_vis.py
 slowfast/visualization/utils.py
 slowfast/visualization/video_visualizer.py
+video_autoencoder/AuxiliaryFunctions.py
+video_autoencoder/GANomaly_model.py
+video_autoencoder/ModelEvaluationPipeline.py
+video_autoencoder/Net.py
+video_autoencoder/ResNetAutoencoder.py
+video_autoencoder/VideoDataset.py
+video_autoencoder/VideoTransforms.py
+video_autoencoder/__init__.py
