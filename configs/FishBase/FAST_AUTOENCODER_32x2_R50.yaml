@@ -1,14 +1,14 @@
 TRAIN:
   ENABLE: True
   DATASET: ptvfishbase
-  BATCH_SIZE: 1
+  BATCH_SIZE: 2
   EVAL_PERIOD: 10
   CHECKPOINT_PERIOD: 10
   AUTO_RESUME: True
 DATA:
   NUM_FRAMES: 32
   SAMPLING_RATE: 2
-  PATH_TO_DATA_DIR: '/media/shirbar/DATA/Fishbase/New_DB/photos/small_swim_dist/'
+  PATH_TO_DATA_DIR: '/home/shirbar/Desktop/data/single_fish'
 
   TRAIN_JITTER_SCALES: [256]
   TRAIN_CROP_SIZE: 256
@@ -59,6 +59,6 @@ DATA_LOADER:
 NUM_GPUS: 1
 NUM_SHARDS: 1
 RNG_SEED: 0
-OUTPUT_DIR: '/media/shirbar/DATA/Fishbase/SlowFastTrials/resnet_autoencoder_512x1x1x1'
+OUTPUT_DIR: '/mnt/results_to_copy/'
 TENSORBOARD:
   ENABLE: True
