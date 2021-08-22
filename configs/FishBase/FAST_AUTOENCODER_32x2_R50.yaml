@@ -7,7 +7,7 @@ TRAIN:
   AUTO_RESUME: True
 DATA:
   NUM_FRAMES: 32
-  SAMPLING_RATE: 2
+  SAMPLING_RATE: 1
   PATH_TO_DATA_DIR: '/home/shirbar/Desktop/data/single_fish'
 
   TRAIN_JITTER_SCALES: [256]
