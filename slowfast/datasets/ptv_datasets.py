@@ -11,7 +11,7 @@ from torch.utils.data import (
     RandomSampler,
     SequentialSampler,
 )
-from torchvision.transforms import Compose, Lambda
+from torchvision.transforms import Compose, Lambda, RandomApply
 from torchvision.transforms._transforms_video import (
     NormalizeVideo,
     RandomCropVideo,
@@ -37,7 +37,7 @@ from pytorchvideo.transforms import (
 
 from . import utils as utils
 from .build import DATASET_REGISTRY
-
+import random
 logger = logging.get_logger(__name__)
 
 
@@ -140,9 +140,26 @@ def div255(x):
     """
     return x / 255.0
 
+def change_brightness(x,max_b=60):
+    """
+    Randomly changes the brightness by some delta_b.
+    Args:
+        x: A tensor of the clip's  frames with shape:
+            (channel, time, height, width).
+        max_b: maximum value of intensity to add/subtract from the clip
+
+    Returns:
+        x_hat (Tensor): clip with modified brightness
+
+    """
+    b = random.randint(-max_b,max_b)
+    x_hat = x+b
+    x_hat = x_hat.clip(0,255)
+    return x_hat
+
 def rgb2gray(x):
     """
-    Convert clip frames from RGB mode to BRG mode.
+    Convert clip frames from RGB mode to GRAYSCALE mode.
     Args:
         x (Tensor): A tensor of the clip's RGB frames with shape:
             (channel, time, height, width).
@@ -420,6 +437,7 @@ def Ptvcharades(cfg, mode):
                         num_classes=cfg.MODEL.NUM_CLASSES,
                     )
                 ),
+
                 ApplyTransformToKey(
                     key="video",
                     transform=Compose(
@@ -480,6 +498,7 @@ def Ptvssv2(cfg, mode):
         cfg (CfgNode): configs.
         mode (string): Options includes `train`, `val`, or `test` mode.
     """
+
     # Only support train, val, and test mode.
     assert mode in [
         "train",
@@ -658,8 +677,9 @@ def Ptvfishbase(cfg, mode):
                     transform=Compose(
                         [
                             UniformTemporalSubsample(cfg.DATA.NUM_FRAMES),
+                            RandomApply(Lambda(change_brightness), p=0.3),
                             Lambda(div255),
-                            #NormalizeVideo(cfg.DATA.MEAN, cfg.DATA.STD),
+                            NormalizeVideo(cfg.DATA.MEAN, cfg.DATA.STD),
                             ShortSideScale(cfg.DATA.TRAIN_JITTER_SCALES[0]),
                         ]
                         + (
@@ -698,8 +718,8 @@ def Ptvfishbase(cfg, mode):
                         [
                             UniformTemporalSubsample(cfg.DATA.NUM_FRAMES),
                             Lambda(div255),
-                            #NormalizeVideo(cfg.DATA.MEAN, cfg.DATA.STD),
-                             ShortSideScale(
+                            NormalizeVideo(cfg.DATA.MEAN, cfg.DATA.STD),
+                            ShortSideScale(
                                 size=cfg.DATA.TRAIN_JITTER_SCALES[0]
                             ),
                         ]
