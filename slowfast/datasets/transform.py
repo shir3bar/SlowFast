@@ -4,7 +4,11 @@
 import math
 import numpy as np
 import torch
+import random
 
+import torchvision.transforms
+from pytorchvideo.transforms import Permute
+from torchvision.transforms import GaussianBlur
 
 def random_short_side_scale_jitter(
     images, min_size, max_size, boxes=None, inverse_uniform_sampling=False
@@ -302,9 +306,9 @@ def brightness_jitter(var, images):
             `num frames` x `channel` x `height` x `width`.
     """
     alpha = 1.0 + np.random.uniform(-var, var)
-
-    img_bright = torch.zeros(images.shape)
+    img_bright = torch.ones(images.shape)  # was torch.zeros, changed it because it made zero sense
     images = blend(images, img_bright, alpha)
+    images = images.clip(0, 1)
     return images
 
 
@@ -400,3 +404,41 @@ def color_normalization(images, mean, stddev):
         out_images[:, idx] = (images[:, idx] - mean[idx]) / stddev[idx]
 
     return out_images
+
+class RandomColorJitter(object):
+
+    def __init__(self, brightness_ratio=0, contrast_ratio=0, saturation_ratio=0, p=0.5):
+
+        self.brightness_ratio = brightness_ratio
+        self.contrast_ratio = contrast_ratio
+        self.saturation_ratio = saturation_ratio
+        self.probability = p
+
+
+    def __call__(self, x):
+        if self.probability < torch.rand(1):
+            return x
+        else:
+            x_mod = color_jitter(x, img_brightness=self.brightness_ratio,
+                         img_contrast=self.contrast_ratio,
+                         img_saturation=self.saturation_ratio)
+            return x_mod
+
+class RandomGaussianBlur(object):
+    """
+    Apply GaussianBlur, specified by kernel and sigma, to each video frame with a certain probability p.
+    Video is assumed to be of a shape [C, T, H, W].
+    """
+    def __init__(self, kernel, sigma=(0.1,0.2),p=0.5):
+        self.gaussian = GaussianBlur(kernel,sigma)
+        self.permute = Permute([1,0,2,3])
+        self.probability = p
+        self.t = torchvision.transforms.Compose([self.permute, self.gaussian, self.permute])
+
+    def __call__(self, clip):
+        if self.probability < torch.rand(1):
+            return clip
+        else:
+            blurred_clip = self.t(clip)
+            return blurred_clip
+

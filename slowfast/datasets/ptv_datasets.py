@@ -38,6 +38,8 @@ from pytorchvideo.transforms import (
 from . import utils as utils
 from .build import DATASET_REGISTRY
 import random
+from slowfast.datasets.transform import RandomColorJitter, RandomGaussianBlur
+
 logger = logging.get_logger(__name__)
 
 
@@ -646,6 +648,8 @@ def Ptvfishbase(cfg, mode):
         "train",
         "val",
         "test",
+        'train_eval',
+        'val_eval',
     ], "Split '{}' not supported".format(mode)
 
     logger.info("Constructing Ptvfishbase {}...".format(mode))
@@ -654,14 +658,14 @@ def Ptvfishbase(cfg, mode):
         cfg.DATA.NUM_FRAMES * cfg.DATA.SAMPLING_RATE / cfg.DATA.TARGET_FPS
     )
     path_to_dir = os.path.join(
-        cfg.DATA.PATH_TO_DATA_DIR, mode
+        cfg.DATA.PATH_TO_DATA_DIR, mode.split('_')[0] #added split to deal with the case of train_eval and val_eval
     )
 
     labeled_video_paths = LabeledVideoPaths.from_directory(path_to_dir)
     num_videos = len(labeled_video_paths)
     labeled_video_paths.path_prefix = cfg.DATA.PATH_PREFIX
     logger.info(
-        "Constructing kinetics dataloader (size: {}) from {}".format(
+        "Constructing fishbase dataloader (size: {}) from {}".format(
             num_videos, path_to_dir
         )
     )
@@ -677,8 +681,9 @@ def Ptvfishbase(cfg, mode):
                     transform=Compose(
                         [
                             UniformTemporalSubsample(cfg.DATA.NUM_FRAMES),
-                            RandomApply(Lambda(change_brightness), p=0.3),
                             Lambda(div255),
+                            RandomColorJitter(brightness_ratio=0.2, p=0.3),
+                            RandomGaussianBlur(kernel=13, sigma=(6.0,10.0), p=0.2),
                             NormalizeVideo(cfg.DATA.MEAN, cfg.DATA.STD),
                             ShortSideScale(cfg.DATA.TRAIN_JITTER_SCALES[0]),
                         ]
