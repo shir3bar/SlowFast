@@ -6,7 +6,7 @@ TRAIN:
   CHECKPOINT_PERIOD: 1
   AUTO_RESUME: True
 DATA:
-  NUM_FRAMES: 32
+  NUM_FRAMES: 64
   SAMPLING_RATE: 2
   PATH_TO_DATA_DIR: '/media/shirbar/DATA/Fishbase/New_DB/photos/small_classification_large_test_both_feed_dist_new'#small_classification' #_large_test/'
   TRAIN_JITTER_SCALES: [256]
@@ -15,7 +15,7 @@ DATA:
   INPUT_CHANNEL_NUM: [1, 1]
 
 SLOWFAST:
-  ALPHA: 4
+  ALPHA: 8
   BETA_INV: 8
   FUSION_CONV_CHANNEL_RATIO: 2
   FUSION_KERNEL_SZ: 7
@@ -64,6 +64,6 @@ DATA_LOADER:
 NUM_GPUS: 1
 NUM_SHARDS: 1
 RNG_SEED: 0
-OUTPUT_DIR: '/media/shirbar/DATA/Fishbase/SlowFastTrials/dist_classifier_grayscale_new_trial_10bsz/'
+OUTPUT_DIR: '/media/shirbar/DATA/Fishbase/SlowFastTrials/dist_classifier_grayscale_normalized_64_fast_8_slow/'
 TENSORBOARD:
   ENABLE: True

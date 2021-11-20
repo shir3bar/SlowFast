@@ -390,7 +390,7 @@ class TestMeter(object):
             )
             self.stats["map"] = map
         else:
-            k = min(self.num_cls,5)
+            k = min(self.num_cls,5)  # in  case there are less than 5 class
             ks = (1,k)
             num_topks_correct = metrics.topks_correct(
                 self.video_preds, self.video_labels, ks
