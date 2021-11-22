@@ -8,7 +8,7 @@ TRAIN:
 DATA:
   NUM_FRAMES: 32
   SAMPLING_RATE: 2
-  PATH_TO_DATA_DIR: '/media/shirbar/DATA/Fishbase/New_DB/photos/ds_by_movie/train_Seq2_val_Seq1_30DPH_F15_dist'#'/media/shirbar/DATA/Fishbase/New_DB/photos/small_ds_1304_dist'#small_classification' #_large_test/'
+  PATH_TO_DATA_DIR: '/home/shirbar/data/train_Seq2_val_Seq1_30DPH_F15_dist'#'/media/shirbar/DATA/Fishbase/New_DB/photos/small_ds_1304_dist'#small_classification' #_large_test/'
   TRAIN_JITTER_SCALES: [256]
   TRAIN_CROP_SIZE: 256
   TEST_CROP_SIZE: 256
@@ -64,7 +64,7 @@ DATA_LOADER:
 NUM_GPUS: 4
 NUM_SHARDS: 1
 RNG_SEED: 0
-OUTPUT_DIR: '/media/shirbar/DATA/Fishbase/SlowFastTrials/train_Seq2_val_Seq1_30DPH_F15_dist/'
+OUTPUT_DIR: '/mnt/slowfast_results/train_Seq2_val_Seq1_30DPH_F15_dist/'
 TENSORBOARD:
   ENABLE: True
 SLOWFAST_8x8_R50_feed_1304:
