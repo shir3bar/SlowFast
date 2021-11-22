@@ -67,5 +67,3 @@ RNG_SEED: 0
 OUTPUT_DIR: '/mnt/slowfast_results/train_Seq2_val_Seq1_30DPH_F15_dist/'
 TENSORBOARD:
   ENABLE: True
-SLOWFAST_8x8_R50_feed_1304:
-  yaml:
