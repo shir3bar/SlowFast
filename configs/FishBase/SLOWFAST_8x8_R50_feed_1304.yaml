@@ -59,11 +59,11 @@ TEST:
   NUM_SPATIAL_CROPS: 1
   NUM_ENSEMBLE_VIEWS: 1
 DATA_LOADER:
-  NUM_WORKERS: 2
+  NUM_WORKERS: 4
   PIN_MEMORY: True
 NUM_GPUS: 1
 NUM_SHARDS: 1
-RNG_SEED: 0
-OUTPUT_DIR: '/media/shirbar/DATA/Fishbase/SlowFastTrials/1304_mixed_checkpipe'
+RNG_SEED: 42
+OUTPUT_DIR: '/media/shirbar/DATA/Fishbase/SlowFastTrials/1304_mixed_checkpipe_p05'
 TENSORBOARD:
   ENABLE: True
