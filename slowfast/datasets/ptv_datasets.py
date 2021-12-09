@@ -16,6 +16,7 @@ from torchvision.transforms._transforms_video import (
     NormalizeVideo,
     RandomCropVideo,
     RandomHorizontalFlipVideo,
+
 )
 
 import slowfast.utils.logging as logging
@@ -38,7 +39,7 @@ from pytorchvideo.transforms import (
 from . import utils as utils
 from .build import DATASET_REGISTRY
 import random
-from slowfast.datasets.transform import RandomColorJitter, RandomGaussianBlur
+from slowfast.datasets.transform import RandomColorJitter, RandomGaussianBlur, RandomVerticalFlipVideo, RandomRot90Video
 
 logger = logging.get_logger(__name__)
 
@@ -682,8 +683,8 @@ def Ptvfishbase(cfg, mode):
                         [
                             UniformTemporalSubsample(cfg.DATA.NUM_FRAMES),
                             Lambda(div255),
-                            RandomColorJitter(brightness_ratio=0.2, p=0.3), #first trial 0.3
-                            RandomGaussianBlur(kernel=13, sigma=(6.0,10.0), p=0.2), # first trial 0.2
+                            RandomColorJitter(brightness_ratio=0.2, p=0.5), #first trial 0.3
+                            RandomGaussianBlur(kernel=13, sigma=(6.0,10.0), p=0.5), # first trial 0.2
                             NormalizeVideo(cfg.DATA.MEAN, cfg.DATA.STD),
                             ShortSideScale(cfg.DATA.TRAIN_JITTER_SCALES[0]),
                         ]
@@ -693,7 +694,9 @@ def Ptvfishbase(cfg, mode):
                             else []
                         )
                         + (
-                            [RandomHorizontalFlipVideo(p=0.5)]
+                            [RandomHorizontalFlipVideo(p=0.5),
+                             RandomVerticalFlipVideo(p=0.5),
+                             RandomRot90Video(p=0.5)]
                             if cfg.DATA.RANDOM_FLIP
                             else []
                         )
