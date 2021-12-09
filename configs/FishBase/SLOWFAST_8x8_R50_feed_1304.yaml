@@ -8,11 +8,11 @@ TRAIN:
 DATA:
   NUM_FRAMES: 32
   SAMPLING_RATE: 2
-  PATH_TO_DATA_DIR: '/media/shirbar/DATA/Fishbase/New_DB/photos/small_ds_1304_dist' #'/media/shirbar/DATA/Fishbase/New_DB/photos/ds_by_movie/train_Seq2_val_Seq1_30DPH_F15_dist'#'/media/shirbar/DATA/Fishbase/New_DB/photos/small_ds_1304_dist'#small_classification' #_large_test/'
+  PATH_TO_DATA_DIR: '/media/shirbar/DATA/Fishbase/New_DB/photos/strike_ds_dist' #'/media/shirbar/DATA/Fishbase/New_DB/photos/ds_by_movie/train_Seq2_val_Seq1_30DPH_F15_dist'#'/media/shirbar/DATA/Fishbase/New_DB/photos/small_ds_1304_dist'#small_classification' #_large_test/'
   TRAIN_JITTER_SCALES: [256]
   TRAIN_CROP_SIZE: 256
   TEST_CROP_SIZE: 256
-  INPUT_CHANNEL_NUM: [1, 1]
+  INPUT_CHANNEL_NUM: [3, 3]
 
 SLOWFAST:
   ALPHA: 4
@@ -40,7 +40,8 @@ SOLVER:
   BASE_LR: 0.01 #0.01 # 1-node
   BASE_LR_SCALE_NUM_SHARDS: True
   LR_POLICY: cosine
-  MAX_EPOCH: 100
+  COSINE_END_LR: 0.00001
+  MAX_EPOCH: 150
   MOMENTUM: 0.9
   WEIGHT_DECAY: 1e-4
   WARMUP_EPOCHS: 0.0
@@ -50,7 +51,7 @@ MODEL:
   NUM_CLASSES: 2
   ARCH: slowfast
   MODEL_NAME: PTVSlowFast
-  LOSS_FUNC: cross_entropy
+  LOSS_FUNC: weighted_cross_entropy
   DROPOUT_RATE: 0.5
 TEST:
   ENABLE: False
@@ -59,11 +60,11 @@ TEST:
   NUM_SPATIAL_CROPS: 1
   NUM_ENSEMBLE_VIEWS: 1
 DATA_LOADER:
-  NUM_WORKERS: 4
+  NUM_WORKERS: 2
   PIN_MEMORY: True
 NUM_GPUS: 1
 NUM_SHARDS: 1
-RNG_SEED: 42
-OUTPUT_DIR: '/media/shirbar/DATA/Fishbase/SlowFastTrials/1304_mixed_checkpipe_p05'
+RNG_SEED: 0
+OUTPUT_DIR: '/media/shirbar/DATA/Fishbase/SlowFastTrials/strike_ds_distw_adam_newtrans'
 TENSORBOARD:
   ENABLE: True
