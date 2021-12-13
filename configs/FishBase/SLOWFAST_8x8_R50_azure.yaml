@@ -61,11 +61,11 @@ TEST:
   NUM_SPATIAL_CROPS: 1
   NUM_ENSEMBLE_VIEWS: 1
 DATA_LOADER:
-  NUM_WORKERS: 1
+  NUM_WORKERS: 16
   PIN_MEMORY: True
 NUM_GPUS: 4
 NUM_SHARDS: 1
 RNG_SEED: 0
-OUTPUT_DIR: '/mnt/slowfast_results/strike_ds_distw_cropped_adam_lr001_newtrans_p05/'
+OUTPUT_DIR: '/mnt/slowfast_results/strike_ds_distw_cropped_adam_lr001_newtrans_p05_2/'
 TENSORBOARD:
   ENABLE: True
