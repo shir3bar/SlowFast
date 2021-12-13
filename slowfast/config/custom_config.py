@@ -6,4 +6,6 @@
 
 def add_custom_config(_C):
     # Add your own customized configs.
-    pass
+    _C.DATA.BRIGHTNESS_PROB = 0.3
+    _C.DATA.BLUR_PROB = 0.2
+
