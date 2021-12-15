@@ -172,6 +172,18 @@ def rgb2gray(x):
     """
     return x[[0], ...]
 
+
+def rgb2var(x):
+    gray = torch.squeeze(x[[0],...])
+    var = gray.var(axis=0).numpy()
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
+    ekernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(7,7))
+    opening = cv2.morphologyEx(var, cv2.MORPH_OPEN, kernel)
+    erode = cv2.erode(opening,ekernel,iterations=2)
+    dilate_var = torch.tensor(cv2.dilate(erode,kernel,iterations=10))
+    var_array = torch.stack((gray,gray,torch.stack([dilate_var]*gray.shape[0])))
+    return var_array
+
 @DATASET_REGISTRY.register()
 def Ptvkinetics(cfg, mode):
     """
@@ -685,13 +697,13 @@ def Ptvfishbase(cfg, mode):
                             Lambda(div255),
                             RandomColorJitter(brightness_ratio=0.2, p=cfg.DATA.BRIGHTNESS_PROB), #first trial 0.3
                             RandomGaussianBlur(kernel=13, sigma=(6.0,10.0), p=cfg.DATA.BLUR_PROB), # first trial 0.2
-                            NormalizeVideo(cfg.DATA.MEAN, cfg.DATA.STD),
+                            #NormalizeVideo(cfg.DATA.MEAN, cfg.DATA.STD),
                             ShortSideScale(cfg.DATA.TRAIN_JITTER_SCALES[0]),
                         ]
                         + (
-                            [Lambda(rgb2gray)]
-                            if cfg.DATA.INPUT_CHANNEL_NUM[0] == 1
-                            else []
+                            [Lambda(rgb2var)]
+                            #if cfg.DATA.INPUT_CHANNEL_NUM[0] == 1
+                            #else []
                         )
                         + (
                             [RandomHorizontalFlipVideo(p=0.5),
@@ -726,15 +738,15 @@ def Ptvfishbase(cfg, mode):
                         [
                             UniformTemporalSubsample(cfg.DATA.NUM_FRAMES),
                             Lambda(div255),
-                            NormalizeVideo(cfg.DATA.MEAN, cfg.DATA.STD),
+                            #NormalizeVideo(cfg.DATA.MEAN, cfg.DATA.STD),
                             ShortSideScale(
                                 size=cfg.DATA.TRAIN_JITTER_SCALES[0]
                             ),
                         ]
                         + (
-                            [Lambda(rgb2gray)]
-                            if cfg.DATA.INPUT_CHANNEL_NUM[0] == 1
-                            else []
+                            [Lambda(rgb2var)]
+                            #if cfg.DATA.INPUT_CHANNEL_NUM[0] == 1
+                            #else []
                         )
                     ),
                 ),
