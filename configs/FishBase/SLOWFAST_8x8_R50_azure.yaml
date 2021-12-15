@@ -45,8 +45,8 @@ SOLVER:
   MAX_EPOCH: 200
   MOMENTUM: 0.9
   WEIGHT_DECAY: 1e-4
-  WARMUP_EPOCHS: 20.0
-  WARMUP_START_LR: 0.001
+  WARMUP_EPOCHS: 0.0
+  WARMUP_START_LR: 0.01
   OPTIMIZING_METHOD: adam
 MODEL:
   NUM_CLASSES: 2
@@ -57,15 +57,15 @@ MODEL:
 TEST:
   ENABLE: False
   DATASET: ptvfishbase
-  BATCH_SIZE: 1
+  BATCH_SIZE: 4
   NUM_SPATIAL_CROPS: 1
   NUM_ENSEMBLE_VIEWS: 1
 DATA_LOADER:
   NUM_WORKERS: 4
   PIN_MEMORY: True
-NUM_GPUS: 1
+NUM_GPUS: 4
 NUM_SHARDS: 1
 RNG_SEED: 0
-OUTPUT_DIR: '/mnt/slowfast_results/strike_ds_distw_cropped_adam_warmup_var/'
+OUTPUT_DIR: '/mnt/slowfast_results/strike_ds_distw_cropped_adam_var2/'
 TENSORBOARD:
   ENABLE: True
