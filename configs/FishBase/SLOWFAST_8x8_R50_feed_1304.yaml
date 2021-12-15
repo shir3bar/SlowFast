@@ -8,11 +8,11 @@ TRAIN:
 DATA:
   NUM_FRAMES: 32
   SAMPLING_RATE: 2
-  PATH_TO_DATA_DIR: '/media/shirbar/DATA/Fishbase/New_DB/photos/strike_ds_dist_cropped' #'/media/shirbar/DATA/Fishbase/New_DB/photos/ds_by_movie/train_Seq2_val_Seq1_30DPH_F15_dist'#'/media/shirbar/DATA/Fishbase/New_DB/photos/small_ds_1304_dist'#small_classification' #_large_test/'
+  PATH_TO_DATA_DIR: '/media/shirbar/DATA/Fishbase/New_DB/photos/small_ds_1304_dist' #'/media/shirbar/DATA/Fishbase/New_DB/photos/ds_by_movie/train_Seq2_val_Seq1_30DPH_F15_dist'#'/media/shirbar/DATA/Fishbase/New_DB/photos/small_ds_1304_dist'#small_classification' #_large_test/'
   TRAIN_JITTER_SCALES: [256]
   TRAIN_CROP_SIZE: 256
   TEST_CROP_SIZE: 256
-  INPUT_CHANNEL_NUM: [1, 1]
+  INPUT_CHANNEL_NUM: [3, 3]
   BRIGHTNESS_PROB: 0.5
   BLUR_PROB: 0.5
 SLOWFAST:
@@ -66,6 +66,6 @@ DATA_LOADER:
 NUM_GPUS: 1
 NUM_SHARDS: 1
 RNG_SEED: 0
-OUTPUT_DIR: '/media/shirbar/DATA/Fishbase/SlowFastTrials/strike_ds_distw_cropped_adam_lr001_newtrans_p05'
+OUTPUT_DIR: '/media/shirbar/DATA/Fishbase/SlowFastTrials/1304_var2_norm'
 TENSORBOARD:
   ENABLE: True
