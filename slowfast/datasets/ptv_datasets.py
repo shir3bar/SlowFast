@@ -181,7 +181,7 @@ def rgb2var(x):
     opening = cv2.morphologyEx(var, cv2.MORPH_OPEN, kernel)
     erode = cv2.erode(opening,ekernel,iterations=2)
     dilate_var = torch.tensor(cv2.dilate(erode,kernel,iterations=10))
-    var_array = torch.stack((gray,torch.stack([dilate_var]*gray.shape[0]),torch.stack([dilate_var]*gray.shape[0])))
+    var_array = torch.stack((gray,gray,torch.stack([dilate_var]*gray.shape[0])))#,torch.stack([dilate_var]*gray.shape[0])))
     return var_array
 
 @DATASET_REGISTRY.register()
