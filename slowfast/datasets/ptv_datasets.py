@@ -697,7 +697,7 @@ def Ptvfishbase(cfg, mode):
                             Lambda(div255),
                             RandomColorJitter(brightness_ratio=0.2, p=cfg.DATA.BRIGHTNESS_PROB), #first trial 0.3
                             RandomGaussianBlur(kernel=13, sigma=(6.0,10.0), p=cfg.DATA.BLUR_PROB), # first trial 0.2
-                            #NormalizeVideo(cfg.DATA.MEAN, cfg.DATA.STD),
+                            NormalizeVideo(cfg.DATA.MEAN, cfg.DATA.STD),
                             ShortSideScale(cfg.DATA.TRAIN_JITTER_SCALES[0]),
                         ]
                         + (
@@ -738,7 +738,7 @@ def Ptvfishbase(cfg, mode):
                         [
                             UniformTemporalSubsample(cfg.DATA.NUM_FRAMES),
                             Lambda(div255),
-                            #NormalizeVideo(cfg.DATA.MEAN, cfg.DATA.STD),
+                            NormalizeVideo(cfg.DATA.MEAN, cfg.DATA.STD),
                             ShortSideScale(
                                 size=cfg.DATA.TRAIN_JITTER_SCALES[0]
                             ),
