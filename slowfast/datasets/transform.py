@@ -5,7 +5,7 @@ import math
 import numpy as np
 import torch
 import random
-
+import cv2
 import torchvision.transforms
 from pytorchvideo.transforms import Permute
 from torchvision.transforms import GaussianBlur
@@ -485,3 +485,22 @@ class RandomVerticalFlipVideo(object):
 
     def __repr__(self):
         return self.__class__.__name__ + f"(p={self.probability})"
+
+class VarianceImageTransform(object):
+    def __init__(self, var_dim=1):
+        assert var_dim in [1, 2]
+        self.var_dim = var_dim
+        self.kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+        self.ekernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+    def __call__(self, clip):
+        gray = torch.squeeze(clip[[0], ...])
+        var = gray.var(axis=0).numpy()
+        opening = cv2.morphologyEx(var, cv2.MORPH_OPEN, self.kernel)
+        erode = cv2.erode(opening, self.ekernel, iterations=2)
+        dilate_var = torch.tensor(cv2.dilate(erode, self.kernel, iterations=10))
+        if self.var_dim == 2:
+            var_array = torch.stack(
+                    (gray, torch.stack([dilate_var] * gray.shape[0]), torch.stack([dilate_var] * gray.shape[0])))
+        else:
+            var_array = torch.stack((gray, gray, torch.stack([dilate_var] * gray.shape[0])))
+        return var_array

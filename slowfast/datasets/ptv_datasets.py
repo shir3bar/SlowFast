@@ -39,7 +39,7 @@ from pytorchvideo.transforms import (
 from . import utils as utils
 from .build import DATASET_REGISTRY
 import random
-from slowfast.datasets.transform import RandomColorJitter, RandomGaussianBlur, RandomVerticalFlipVideo, RandomRot90Video
+from slowfast.datasets.transform import RandomColorJitter, RandomGaussianBlur, RandomVerticalFlipVideo, RandomRot90Video, VarianceImageTransform
 
 logger = logging.get_logger(__name__)
 
@@ -173,7 +173,8 @@ def rgb2gray(x):
     return x[[0], ...]
 
 
-def rgb2var(x):
+def rgb2var(x,var_dim=1):
+    assert var_dim in [1,2]
     gray = torch.squeeze(x[[0],...])
     var = gray.var(axis=0).numpy()
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
@@ -181,7 +182,10 @@ def rgb2var(x):
     opening = cv2.morphologyEx(var, cv2.MORPH_OPEN, kernel)
     erode = cv2.erode(opening,ekernel,iterations=2)
     dilate_var = torch.tensor(cv2.dilate(erode,kernel,iterations=10))
-    var_array = torch.stack((gray,gray,torch.stack([dilate_var]*gray.shape[0])))#,torch.stack([dilate_var]*gray.shape[0])))
+    if var_dim==2:
+        var_array = torch.stack((gray,torch.stack([dilate_var]*gray.shape[0]),torch.stack([dilate_var]*gray.shape[0])))
+    elif var_dim==1:
+        var_array = torch.stack((gray, gray, torch.stack([dilate_var] * gray.shape[0])))
     return var_array
 
 @DATASET_REGISTRY.register()
@@ -702,8 +706,13 @@ def Ptvfishbase(cfg, mode):
                         ]
                         + (
                             [Lambda(rgb2var)]
-                            #if cfg.DATA.INPUT_CHANNEL_NUM[0] == 1
-                            #else []
+                            if cfg.DATA.INPUT_CHANNEL_NUM[0] == 1
+                            else []
+                        )
+                        + (
+                            [VarianceImageTransform(var_dim=cfg.DATA.VAR_DIM)]
+                            if cfg.DATA.VARIANCE_IMG
+                            else []
                         )
                         + (
                             [RandomHorizontalFlipVideo(p=0.5),
@@ -744,9 +753,14 @@ def Ptvfishbase(cfg, mode):
                             ),
                         ]
                         + (
-                            [Lambda(rgb2var)]
-                            #if cfg.DATA.INPUT_CHANNEL_NUM[0] == 1
-                            #else []
+                            [Lambda(rgb2gray)]
+                            if cfg.DATA.INPUT_CHANNEL_NUM[0] == 1
+                            else []
+                        )
+                        + (
+                            [VarianceImageTransform(var_dim=cfg.DATA.VAR_DIM)]
+                            if cfg.DATA.VARIANCE_IMG
+                            else []
                         )
                     ),
                 ),
