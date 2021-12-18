@@ -166,15 +166,16 @@ def train_epoch(
 
     # Log epoch stats.
     train_meter.log_epoch_stats(cur_epoch)
-    avg_loss = train_meter.loss_total / train_meter.num_samples
-    top1_err = train_meter.num_top1_mis / train_meter.num_samples
-    writer.add_scalars(
-        {
-            "Train/epoch_loss": avg_loss,
-            "Train/epoch_top1_err": top1_err,
-        },
-        global_step=cur_epoch,
-    )
+    if writer is not None:
+        avg_loss = train_meter.loss_total / train_meter.num_samples
+        top1_err = train_meter.num_top1_mis / train_meter.num_samples
+        writer.add_scalars(
+            {
+                "Train/epoch_loss": avg_loss,
+                "Train/epoch_top1_err": top1_err,
+            },
+            global_step=cur_epoch,
+        )
     train_meter.reset()
 
 
@@ -286,13 +287,14 @@ def eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer=None):
 
     # Log epoch stats.
     val_meter.log_epoch_stats(cur_epoch)
-    top1_err = val_meter.num_top1_mis / val_meter.num_samples
-    writer.add_scalars(
-        {
-            "Val/epoch_top1_err": top1_err,
-        },
-        global_step=cur_epoch,
-    )
+    if writer is not None:
+        top1_err = val_meter.num_top1_mis / val_meter.num_samples
+        writer.add_scalars(
+            {
+                "Val/epoch_top1_err": top1_err,
+            },
+            global_step=cur_epoch,
+        )
     # write to tensorboard format if available.
     if writer is not None:
         if cfg.DETECTION.ENABLE:
