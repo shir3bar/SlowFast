@@ -12,7 +12,7 @@ DATA:
   TRAIN_JITTER_SCALES: [256]
   TRAIN_CROP_SIZE: 256
   TEST_CROP_SIZE: 256
-  INPUT_CHANNEL_NUM: [3, 3]
+  INPUT_CHANNEL_NUM: [1, 1]
   BRIGHTNESS_PROB: 0.5
   BLUR_PROB: 0.5
   VARIANCE_IMG: False
@@ -40,7 +40,7 @@ BN:
   USE_PRECISE_STATS: False
   NUM_BATCHES_PRECISE: 200
 SOLVER:
-  BASE_LR: 0.1 #0.01 # 1-node
+  BASE_LR: 0.01 #0.01 # 1-node
   BASE_LR_SCALE_NUM_SHARDS: True
   LR_POLICY: cosine
   COSINE_END_LR: 0.0000001
@@ -54,7 +54,7 @@ MODEL:
   NUM_CLASSES: 2
   ARCH: slowfast
   MODEL_NAME: PTVSlowFast
-  LOSS_FUNC: weighted_cross_entropy
+  LOSS_FUNC: cross_entropy
   DROPOUT_RATE: 0.5
 TEST:
   ENABLE: False
@@ -65,9 +65,9 @@ TEST:
 DATA_LOADER:
   NUM_WORKERS: 4
   PIN_MEMORY: True
-NUM_GPUS: 1
+NUM_GPUS: 4
 NUM_SHARDS: 1
 RNG_SEED: 0
-OUTPUT_DIR: '/mnt/slowfast_results/strike_ds_equal_sgd/'
+OUTPUT_DIR: '/mnt/slowfast_results/strike_ds_equal_sgd_notweighted/'
 TENSORBOARD:
   ENABLE: True
