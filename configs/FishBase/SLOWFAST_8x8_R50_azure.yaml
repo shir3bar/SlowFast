@@ -8,7 +8,7 @@ TRAIN:
 DATA:
   NUM_FRAMES: 32
   SAMPLING_RATE: 2
-  PATH_TO_DATA_DIR: '/home/shirbar/data/strike_ds_dist_cropped' #train_Seq2_val_Seq1_30DPH_F15_dist'#'/media/shirbar/DATA/Fishbase/New_DB/photos/small_ds_1304_dist'#small_classification' #_large_test/'
+  PATH_TO_DATA_DIR: '/home/shirbar/data/strike_ds_dist_cropped_equal' #train_Seq2_val_Seq1_30DPH_F15_dist'#'/media/shirbar/DATA/Fishbase/New_DB/photos/small_ds_1304_dist'#small_classification' #_large_test/'
   TRAIN_JITTER_SCALES: [256]
   TRAIN_CROP_SIZE: 256
   TEST_CROP_SIZE: 256
@@ -40,16 +40,16 @@ BN:
   USE_PRECISE_STATS: False
   NUM_BATCHES_PRECISE: 200
 SOLVER:
-  BASE_LR: 0.01 #0.01 # 1-node
+  BASE_LR: 0.1 #0.01 # 1-node
   BASE_LR_SCALE_NUM_SHARDS: True
   LR_POLICY: cosine
   COSINE_END_LR: 0.0000001
-  MAX_EPOCH: 200
+  MAX_EPOCH: 300
   MOMENTUM: 0.9
   WEIGHT_DECAY: 1e-4
   WARMUP_EPOCHS: 0.0
   WARMUP_START_LR: 0.01
-  OPTIMIZING_METHOD: adam
+  OPTIMIZING_METHOD: sgd
 MODEL:
   NUM_CLASSES: 2
   ARCH: slowfast
@@ -68,6 +68,6 @@ DATA_LOADER:
 NUM_GPUS: 4
 NUM_SHARDS: 1
 RNG_SEED: 0
-OUTPUT_DIR: '/mnt/slowfast_results/mixed_strike_ds/'
+OUTPUT_DIR: '/mnt/slowfast_results/strike_ds_equal_sgd/'
 TENSORBOARD:
   ENABLE: True
