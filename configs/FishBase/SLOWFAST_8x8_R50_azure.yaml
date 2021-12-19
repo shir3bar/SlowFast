@@ -40,7 +40,7 @@ BN:
   USE_PRECISE_STATS: False
   NUM_BATCHES_PRECISE: 200
 SOLVER:
-  BASE_LR: 0.01 #0.01 # 1-node
+  BASE_LR: 0.001 #0.01 # 1-node
   BASE_LR_SCALE_NUM_SHARDS: True
   LR_POLICY: cosine
   COSINE_END_LR: 0.0000001
@@ -68,6 +68,6 @@ DATA_LOADER:
 NUM_GPUS: 4
 NUM_SHARDS: 1
 RNG_SEED: 0
-OUTPUT_DIR: '/mnt/slowfast_results/strike_ds_equal_sgd_notweighted/'
+OUTPUT_DIR: '/mnt/slowfast_results/strike_ds_equal_sgd_0001/'
 TENSORBOARD:
   ENABLE: True
