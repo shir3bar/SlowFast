@@ -1,0 +1,75 @@
+TRAIN:
+  ENABLE: True
+  DATASET: ptvfishbase
+  BATCH_SIZE: 4
+  EVAL_PERIOD: 5
+  CHECKPOINT_PERIOD: 1
+  AUTO_RESUME: True
+DATA:
+  NUM_FRAMES: 32
+  SAMPLING_RATE: 2
+  PATH_TO_DATA_DIR: '/home/shirbar/data/strike_ds_dist_cropped_equal' #'/media/shirbar/DATA/Fishbase/New_DB/photos/ds_by_movie/train_Seq2_val_Seq1_30DPH_F15_dist'#'/media/shirbar/DATA/Fishbase/New_DB/photos/small_ds_1304_dist'#small_classification' #_large_test/'
+  TRAIN_JITTER_SCALES: [256]
+  TRAIN_CROP_SIZE: 256
+  TEST_CROP_SIZE: 256
+  INPUT_CHANNEL_NUM: [3,3]
+  BRIGHTNESS_PROB: 0.5
+  BLUR_PROB: 0.5
+  VARIANCE_IMG: False
+  BRIGHTNESS_RATIO: 0.2
+SLOWFAST:
+  ALPHA: 4
+  BETA_INV: 8
+  FUSION_CONV_CHANNEL_RATIO: 2
+  FUSION_KERNEL_SZ: 7
+RESNET:
+  ZERO_INIT_FINAL_BN: True
+  WIDTH_PER_GROUP: 64
+  NUM_GROUPS: 1
+  DEPTH: 50
+  TRANS_FUNC: bottleneck_transform
+  STRIDE_1X1: False
+  NUM_BLOCK_TEMP_KERNEL: [[3, 3], [4, 4], [6, 6], [3, 3]]
+  SPATIAL_STRIDES: [[1, 1], [2, 2], [2, 2], [2, 2]]
+  SPATIAL_DILATIONS: [[1, 1], [1, 1], [1, 1], [1, 1]]
+NONLOCAL:
+  LOCATION: [[[], []], [[], []], [[], []], [[], []]]
+  GROUP: [[1, 1], [1, 1], [1, 1], [1, 1]]
+  INSTANTIATION: dot_product
+BN:
+  USE_PRECISE_STATS: False
+  NUM_BATCHES_PRECISE: 200
+SOLVER:
+  BASE_LR: 0.001 #0.01 # 1-node
+  BASE_LR_SCALE_NUM_SHARDS: True
+  LR_POLICY: cosine
+  COSINE_END_LR: 0.0000001
+  MAX_EPOCH: 50
+  MOMENTUM: 0.9
+  WEIGHT_DECAY: 1e-4
+  WARMUP_EPOCHS: 0.0
+  WARMUP_START_LR: 0.01
+  OPTIMIZING_METHOD: adam
+MODEL:
+  NUM_CLASSES: 2
+  ARCH: slowfast
+  MODEL_NAME: PTVSlowFast
+  LOSS_FUNC: cross_entropy
+  DROPOUT_RATE: 0.5
+TEST:
+  ENABLE: False
+  DATASET: ptvfishbase
+  BATCH_SIZE: 1
+  NUM_SPATIAL_CROPS: 1
+  NUM_ENSEMBLE_VIEWS: 1
+DATA_LOADER:
+  NUM_WORKERS: 4
+  PIN_MEMORY: True
+NUM_GPUS: 1
+NUM_SHARDS: 1
+RNG_SEED: 42
+OUTPUT_DIR: '/mnt/slowfast_results/pretrained_sgd'
+TENSORBOARD:
+  ENABLE: True
+  CONFUSION_MATRIX:
+    ENABLE: True
