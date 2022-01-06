@@ -15,8 +15,9 @@ DATA:
   INPUT_CHANNEL_NUM: [3,3]
   BRIGHTNESS_PROB: 0.5
   BLUR_PROB: 0.5
-  VARIANCE_IMG: False
+  VARIANCE_IMG: True
   BRIGHTNESS_RATIO: 0.2
+  VAR_DIM: 1
 SLOWFAST:
   ALPHA: 4
   BETA_INV: 8
@@ -40,7 +41,7 @@ BN:
   USE_PRECISE_STATS: False
   NUM_BATCHES_PRECISE: 200
 SOLVER:
-  BASE_LR: 0.001 #0.01 # 1-node
+  BASE_LR: 0.01 #0.01 # 1-node
   BASE_LR_SCALE_NUM_SHARDS: True
   LR_POLICY: cosine
   COSINE_END_LR: 0.0000001
@@ -68,7 +69,7 @@ DATA_LOADER:
 NUM_GPUS: 1
 NUM_SHARDS: 1
 RNG_SEED: 42
-OUTPUT_DIR: '/media/shirbar/DATA/Fishbase/SlowFastTrials/strike_ds_equal_adam_001_pretrained'
+OUTPUT_DIR: '/media/shirbar/DATA/Fishbase/SlowFastTrials/strike_ds_equal_sgd_001_pretrained_no_var'
 TENSORBOARD:
   ENABLE: True
   CONFUSION_MATRIX:
