@@ -104,7 +104,7 @@ def is_checkpoint_epoch(cfg, cur_epoch, multigrid_schedule=None):
     return (cur_epoch + 1) % cfg.TRAIN.CHECKPOINT_PERIOD == 0
 
 
-def save_checkpoint(path_to_job, model, optimizer, epoch, cfg):
+def save_checkpoint(path_to_job, model, optimizer, epoch, cfg,stats=None):
     """
     Save a checkpoint.
     Args:
@@ -128,6 +128,7 @@ def save_checkpoint(path_to_job, model, optimizer, epoch, cfg):
         "model_state": normalized_sd,
         "optimizer_state": optimizer.state_dict(),
         "cfg": cfg.dump(),
+        'stats':stats
     }
     # Write the checkpoint.
     path_to_checkpoint = get_path_to_checkpoint(path_to_job, epoch + 1)

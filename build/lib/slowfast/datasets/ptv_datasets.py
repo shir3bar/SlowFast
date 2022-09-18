@@ -11,11 +11,12 @@ from torch.utils.data import (
     RandomSampler,
     SequentialSampler,
 )
-from torchvision.transforms import Compose, Lambda
+from torchvision.transforms import Compose, Lambda, RandomApply
 from torchvision.transforms._transforms_video import (
     NormalizeVideo,
     RandomCropVideo,
     RandomHorizontalFlipVideo,
+
 )
 
 import slowfast.utils.logging as logging
@@ -37,6 +38,8 @@ from pytorchvideo.transforms import (
 
 from . import utils as utils
 from .build import DATASET_REGISTRY
+import random
+from slowfast.datasets.transform import RandomColorJitter, RandomGaussianBlur, RandomVerticalFlipVideo, RandomRot90Video, VarianceImageTransform
 
 logger = logging.get_logger(__name__)
 
@@ -140,9 +143,26 @@ def div255(x):
     """
     return x / 255.0
 
+def change_brightness(x,max_b=60):
+    """
+    Randomly changes the brightness by some delta_b.
+    Args:
+        x: A tensor of the clip's  frames with shape:
+            (channel, time, height, width).
+        max_b: maximum value of intensity to add/subtract from the clip
+
+    Returns:
+        x_hat (Tensor): clip with modified brightness
+
+    """
+    b = random.randint(-max_b,max_b)
+    x_hat = x+b
+    x_hat = x_hat.clip(0,255)
+    return x_hat
+
 def rgb2gray(x):
     """
-    Convert clip frames from RGB mode to BRG mode.
+    Convert clip frames from RGB mode to GRAYSCALE mode.
     Args:
         x (Tensor): A tensor of the clip's RGB frames with shape:
             (channel, time, height, width).
@@ -151,6 +171,22 @@ def rgb2gray(x):
         x (Tensor): Converted tensor
     """
     return x[[0], ...]
+
+
+def rgb2var(x,var_dim=1):
+    assert var_dim in [1,2]
+    gray = torch.squeeze(x[[0],...])
+    var = gray.var(axis=0).numpy()
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
+    ekernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(7,7))
+    opening = cv2.morphologyEx(var, cv2.MORPH_OPEN, kernel)
+    erode = cv2.erode(opening,ekernel,iterations=2)
+    dilate_var = torch.tensor(cv2.dilate(erode,kernel,iterations=10))
+    if var_dim==2:
+        var_array = torch.stack((gray,torch.stack([dilate_var]*gray.shape[0]),torch.stack([dilate_var]*gray.shape[0])))
+    elif var_dim==1:
+        var_array = torch.stack((gray, gray, torch.stack([dilate_var] * gray.shape[0])))
+    return var_array
 
 @DATASET_REGISTRY.register()
 def Ptvkinetics(cfg, mode):
@@ -420,6 +456,7 @@ def Ptvcharades(cfg, mode):
                         num_classes=cfg.MODEL.NUM_CLASSES,
                     )
                 ),
+
                 ApplyTransformToKey(
                     key="video",
                     transform=Compose(
@@ -480,6 +517,7 @@ def Ptvssv2(cfg, mode):
         cfg (CfgNode): configs.
         mode (string): Options includes `train`, `val`, or `test` mode.
     """
+
     # Only support train, val, and test mode.
     assert mode in [
         "train",
@@ -627,6 +665,8 @@ def Ptvfishbase(cfg, mode):
         "train",
         "val",
         "test",
+        'train_eval',
+        'val_eval',
     ], "Split '{}' not supported".format(mode)
 
     logger.info("Constructing Ptvfishbase {}...".format(mode))
@@ -635,14 +675,14 @@ def Ptvfishbase(cfg, mode):
         cfg.DATA.NUM_FRAMES * cfg.DATA.SAMPLING_RATE / cfg.DATA.TARGET_FPS
     )
     path_to_dir = os.path.join(
-        cfg.DATA.PATH_TO_DATA_DIR, mode
+        cfg.DATA.PATH_TO_DATA_DIR, mode.split('_')[0] #added split to deal with the case of train_eval and val_eval
     )
 
     labeled_video_paths = LabeledVideoPaths.from_directory(path_to_dir)
     num_videos = len(labeled_video_paths)
     labeled_video_paths.path_prefix = cfg.DATA.PATH_PREFIX
     logger.info(
-        "Constructing kinetics dataloader (size: {}) from {}".format(
+        "Constructing fishbase dataloader (size: {}) from {}".format(
             num_videos, path_to_dir
         )
     )
@@ -659,7 +699,9 @@ def Ptvfishbase(cfg, mode):
                         [
                             UniformTemporalSubsample(cfg.DATA.NUM_FRAMES),
                             Lambda(div255),
-                            #NormalizeVideo(cfg.DATA.MEAN, cfg.DATA.STD),
+                            RandomColorJitter(brightness_ratio=cfg.DATA.BRIGHTNESS_RATIO, p=cfg.DATA.BRIGHTNESS_PROB), #first trial 0.3
+                            RandomGaussianBlur(kernel=13, sigma=(6.0,10.0), p=cfg.DATA.BLUR_PROB), # first trial 0.2
+                            NormalizeVideo(cfg.DATA.MEAN, cfg.DATA.STD),
                             ShortSideScale(cfg.DATA.TRAIN_JITTER_SCALES[0]),
                         ]
                         + (
@@ -668,7 +710,14 @@ def Ptvfishbase(cfg, mode):
                             else []
                         )
                         + (
-                            [RandomHorizontalFlipVideo(p=0.5)]
+                            [VarianceImageTransform(var_dim=cfg.DATA.VAR_DIM)]
+                            if cfg.DATA.VARIANCE_IMG
+                            else []
+                        )
+                        + (
+                            [RandomHorizontalFlipVideo(p=0.5),
+                             RandomVerticalFlipVideo(p=0.5),
+                             RandomRot90Video(p=0.5)]
                             if cfg.DATA.RANDOM_FLIP
                             else []
                         )
@@ -699,10 +748,20 @@ def Ptvfishbase(cfg, mode):
                             UniformTemporalSubsample(cfg.DATA.NUM_FRAMES),
                             Lambda(div255),
                             NormalizeVideo(cfg.DATA.MEAN, cfg.DATA.STD),
-                             ShortSideScale(
+                            ShortSideScale(
                                 size=cfg.DATA.TRAIN_JITTER_SCALES[0]
                             ),
                         ]
+                        + (
+                            [Lambda(rgb2gray)]
+                            if cfg.DATA.INPUT_CHANNEL_NUM[0] == 1
+                            else []
+                        )
+                        + (
+                            [VarianceImageTransform(var_dim=cfg.DATA.VAR_DIM)]
+                            if cfg.DATA.VARIANCE_IMG
+                            else []
+                        )
                     ),
                 ),
                 ApplyTransformToKey(key="video", transform=PackPathway(cfg)),
