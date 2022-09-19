@@ -55,7 +55,7 @@ DATA_LOADER:
   PIN_MEMORY: True
 NUM_GPUS: 1
 NUM_SHARDS: 1
-RNG_SEED: 0
+RNG_SEED: 42
 OUTPUT_DIR: '/media/shirbar/DATA/Fishbase/SlowFastTrials/slow_balanced_8x8_42seed/'
 TENSORBOARD:
   ENABLE: True
