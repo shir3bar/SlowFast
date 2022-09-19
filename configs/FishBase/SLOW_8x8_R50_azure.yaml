@@ -8,7 +8,7 @@ TRAIN:
 DATA:
   NUM_FRAMES: 8
   SAMPLING_RATE: 8
-  PATH_TO_DATA_DIR: '/media/shirbar/DATA/Fishbase/New_DB/photos/small_classification_noise'#_large_test_both_feed/'
+  PATH_TO_DATA_DIR: '/home/shirbar/data/balanced_ds'#_large_test_both_feed/'
   TRAIN_JITTER_SCALES: [256]
   TRAIN_CROP_SIZE: 256
   TEST_CROP_SIZE: 256
@@ -56,6 +56,6 @@ DATA_LOADER:
 NUM_GPUS: 1
 NUM_SHARDS: 1
 RNG_SEED: 0
-OUTPUT_DIR: '/media/shirbar/DATA/Fishbase/SlowFastTrials/slow_ablation_noise/'
+OUTPUT_DIR: '/media/shirbar/DATA/Fishbase/SlowFastTrials/slow_balanced_8x8_42seed/'
 TENSORBOARD:
   ENABLE: True
