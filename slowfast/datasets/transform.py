@@ -460,7 +460,7 @@ class RandomRot90Video(object):
             rot_clip = torch.rot90(clip, dims=[-2,-1],k=self.k)
             return rot_clip
 
-class RandomVerticalFlipVideo(object):
+class RandomVerticalFlipVideo(torch.nn.Module):
     """
     Flip the video clip along the vertical direction with a given probability
     Args:

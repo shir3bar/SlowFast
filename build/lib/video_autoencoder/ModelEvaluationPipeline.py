@@ -161,15 +161,18 @@ class ResNetAE(BaseAE):
         self.laplacian.weight = nn.Parameter(seven_pt_stencil.unsqueeze(0).unsqueeze(0).float())
         self.laplacian.to('cuda')
         self.laplacian.eval()
-        self.loss = lambda img_in,img_out: \
-            loss_weights['l_lap']*self.lap_loss(self.laplacian(img_out),self.laplacian(img_in)) + \
+        self.loss = lambda img_in,img_out,lap_in,lap_out: \
+            loss_weights['l_lap']*self.lap_loss(lap_out,lap_in) + \
             loss_weights['l_recon']*self.recon_loss(img_out, img_in)
         self.loss_weights = loss_weights
 
 
     def calc_loss(self, clips,validate=False,test=False):
         img_out = self.model([clips])
-        loss = self.loss(clips, img_out)
+        with torch.no_grad():
+            lap_in = self.laplacian(img_out)
+            lap_out = self.laplacian(clips)
+        loss = self.loss(clips, img_out,lap_in,lap_out)
         if not validate:
             loss.backward()
         running_loss = loss.item() * clips.size(0)

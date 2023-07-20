@@ -234,7 +234,7 @@ class PTVSlowFast(nn.Module):
             cfg.RESNET.TRANS_FUNC == "bottleneck_transform"
         ), f"Unsupported TRANS_FUNC type {cfg.RESNET.TRANS_FUNC} for PTVSlowFast"
 
-        self.detection_mode =  cfg.DETECTION.ENABLE
+        self.detection_mode = cfg.DETECTION.ENABLE
         self._construct_network(cfg)
 
     def _construct_network(self, cfg):
@@ -245,7 +245,7 @@ class PTVSlowFast(nn.Module):
             cfg (CfgNode): model building configs, details are in the
                 comments of the config file.
         """
-        _MODEL_STAGE_DEPTH = {50: (3, 4, 6, 3), 101: (3, 4, 23, 3)}
+        _MODEL_STAGE_DEPTH = {18:(1,1,1,1), 50: (3, 4, 6, 3), 101: (3, 4, 23, 3)}
 
         # Params from configs.
         norm_module = get_norm(cfg)

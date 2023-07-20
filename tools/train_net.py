@@ -7,7 +7,7 @@ import numpy as np
 import pprint
 import torch
 from fvcore.nn.precise_bn import get_bn_modules, update_bn_stats
-
+import os
 import slowfast.models.losses as losses
 import slowfast.models.optimizer as optim
 import slowfast.utils.checkpoint as cu
@@ -20,6 +20,7 @@ from slowfast.datasets import loader
 from slowfast.models import build_model
 from slowfast.utils.meters import AVAMeter, EpochTimer, TrainMeter, ValMeter
 from slowfast.utils.multigrid import MultigridSchedule
+from sklearn.metrics import confusion_matrix
 
 logger = logging.get_logger(__name__)
 
@@ -166,9 +167,9 @@ def train_epoch(
 
     # Log epoch stats.
     train_meter.log_epoch_stats(cur_epoch)
+    avg_loss = train_meter.loss_total / train_meter.num_samples
+    top1_err = train_meter.num_top1_mis / train_meter.num_samples
     if writer is not None:
-        avg_loss = train_meter.loss_total / train_meter.num_samples
-        top1_err = train_meter.num_top1_mis / train_meter.num_samples
         writer.add_scalars(
             {
                 "Train/epoch_loss": avg_loss,
@@ -450,7 +451,6 @@ def train(cfg):
 
     # Perform the training loop.
     logger.info("Start epoch: {}".format(start_epoch + 1))
-
     epoch_timer = EpochTimer()
     for cur_epoch in range(start_epoch, cfg.SOLVER.MAX_EPOCH):
         if cfg.MULTIGRID.LONG_CYCLE:
@@ -524,7 +524,7 @@ def train(cfg):
 
         # Save a checkpoint.
         if is_checkp_epoch:
-            cu.save_checkpoint(cfg.OUTPUT_DIR, model, optimizer, cur_epoch, cfg)
+            cu.save_checkpoint(cfg.OUTPUT_DIR, model, optimizer, cur_epoch, cfg,stats)
         # Evaluate the model on validation set.
         if is_eval_epoch:
             eval_epoch(val_loader, model, val_meter, cur_epoch, cfg, writer)
