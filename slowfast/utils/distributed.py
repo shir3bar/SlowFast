@@ -9,8 +9,18 @@ import pickle
 import torch
 import torch.distributed as dist
 
-_LOCAL_PROCESS_GROUP = None
+from pytorchvideo.layers.distributed import (  # noqa
+    cat_all_gather,
+    get_local_process_group,
+    get_local_rank,
+    get_local_size,
+    get_world_size,
+    init_distributed_training as _init_distributed_training,
+)
 
+
+def init_distributed_training(cfg):
+    return _init_distributed_training(cfg.NUM_GPUS, cfg.SHARD_ID)
 
 def all_gather(tensors):
     """
@@ -111,17 +121,6 @@ def is_root_proc():
         return True
 
 
-def get_world_size():
-    """
-    Get the size of the world.
-    """
-    if not dist.is_available():
-        return 1
-    if not dist.is_initialized():
-        return 1
-    return dist.get_world_size()
-
-
 def get_rank():
     """
     Get the rank of the current process.
@@ -178,11 +177,11 @@ def _serialize_to_tensor(data, group):
     device = torch.device("cpu" if backend == "gloo" else "cuda")
 
     buffer = pickle.dumps(data)
-    if len(buffer) > 1024 ** 3:
+    if len(buffer) > 1024**3:
         logger = logging.getLogger(__name__)
         logger.warning(
             "Rank {} trying to all-gather {:.2f} GB of data on device {}".format(
-                get_rank(), len(buffer) / (1024 ** 3), device
+                get_rank(), len(buffer) / (1024**3), device
             )
         )
     storage = torch.ByteStorage.from_buffer(buffer)
@@ -265,45 +264,46 @@ def all_gather_unaligned(data, group=None):
     return data_list
 
 
-def init_distributed_training(cfg):
-    """
-    Initialize variables needed for distributed training.
-    """
-    if cfg.NUM_GPUS <= 1:
-        return
-    num_gpus_per_machine = cfg.NUM_GPUS
-    num_machines = dist.get_world_size() // num_gpus_per_machine
-    for i in range(num_machines):
-        ranks_on_i = list(
-            range(i * num_gpus_per_machine, (i + 1) * num_gpus_per_machine)
-        )
-        pg = dist.new_group(ranks_on_i)
-        if i == cfg.SHARD_ID:
-            global _LOCAL_PROCESS_GROUP
-            _LOCAL_PROCESS_GROUP = pg
+class GatherLayer(torch.autograd.Function):
+    """Gather tensors from all process, supporting backward propagation."""
+
+    @staticmethod
+    def forward(ctx, input):
+        ctx.save_for_backward(input)
+        output = [torch.zeros_like(input) for _ in range(dist.get_world_size())]
+        dist.all_gather(output, input)
+        return tuple(output)
+
+    @staticmethod
+    def backward(ctx, *grads):
+        (input,) = ctx.saved_tensors
+        grad_out = torch.zeros_like(input)
+        grad_out[:] = grads[dist.get_rank()]
+        return grad_out
 
 
-def get_local_size() -> int:
-    """
-    Returns:
-        The size of the per-machine process group,
-        i.e. the number of processes per machine.
-    """
-    if not dist.is_available():
-        return 1
-    if not dist.is_initialized():
-        return 1
-    return dist.get_world_size(group=_LOCAL_PROCESS_GROUP)
+class AllGatherWithGradient(torch.autograd.Function):
+    """AllGatherWithGradient"""
 
+    @staticmethod
+    def forward(ctx, input):
+        world_size = dist.get_world_size()
+        x_gather = [torch.ones_like(input) for _ in range(world_size)]
+        torch.distributed.all_gather(x_gather, input, async_op=False)
+        x_gather = torch.cat(x_gather, dim=0)
+        return x_gather
 
-def get_local_rank() -> int:
-    """
-    Returns:
-        The rank of the current process within the local (per-machine) process group.
-    """
-    if not dist.is_available():
-        return 0
-    if not dist.is_initialized():
-        return 0
-    assert _LOCAL_PROCESS_GROUP is not None
-    return dist.get_rank(group=_LOCAL_PROCESS_GROUP)
+    @staticmethod
+    def backward(ctx, grad_output):
+
+        reduction = torch.distributed.all_reduce(grad_output, async_op=True)
+        reduction.wait()
+
+        world_size = dist.get_world_size()
+        N = grad_output.size(0)
+        mini_batchsize = N // world_size
+        cur_gpu = torch.distributed.get_rank()
+        grad_output = grad_output[
+            cur_gpu * mini_batchsize : (cur_gpu + 1) * mini_batchsize
+        ]
+        return grad_output

@@ -6,7 +6,12 @@ PySlowFast is an open source video understanding codebase from FAIR that provide
 - [Non-local Neural Networks](https://arxiv.org/abs/1711.07971)
 - [A Multigrid Method for Efficiently Training Video Models](https://arxiv.org/abs/1912.00998)
 - [X3D: Progressive Network Expansion for Efficient Video Recognition](https://arxiv.org/abs/2004.04730)
-- [Multiscale Vision Transformers](https://arxiv.org/abs/2104.11227.pdf) To be released in a week
+- [Multiscale Vision Transformers](https://arxiv.org/abs/2104.11227)
+- [A Large-Scale Study on Unsupervised Spatiotemporal Representation Learning](https://arxiv.org/abs/2104.14558)
+- [MViTv2: Improved Multiscale Vision Transformers for Classification and Detection](https://arxiv.org/abs/2112.01526)
+- [Masked Feature Prediction for Self-Supervised Visual Pre-Training](https://arxiv.org/abs/2112.09133)
+- [Masked Autoencoders As Spatiotemporal Learners](https://arxiv.org/abs/2205.09113)
+- [Reversible Vision Transformers](https://openaccess.thecvf.com/content/CVPR2022/papers/Mangalam_Reversible_Vision_Transformers_CVPR_2022_paper.pdf)
 
 <div align="center">
   <img src="demo/ava_demo.gif" width="600px"/>
@@ -22,9 +27,16 @@ The goal of PySlowFast is to provide a high-performance, light-weight pytorch co
 - I3D
 - Non-local Network
 - X3D
+- MViTv1 and MViTv2
+- Rev-ViT and Rev-MViT
 
 ## Updates
- - We are supporting [Multiscale Vision Transformers](https://arxiv.org/abs/2104.11227.pdf) in a week. See [`projects/mvit`](./projects/mvit/README.md) for more information.
+ - We now [Reversible Vision Transformers](https://openaccess.thecvf.com/content/CVPR2022/papers/Mangalam_Reversible_Vision_Transformers_CVPR_2022_paper.pdf). Both Reversible ViT and MViT models released. See [`projects/rev`](./projects/rev/README.md).
+ - We now support [MAE for Video](https://arxiv.org/abs/2104.11227.pdf). See [`projects/mae`](./projects/mae/README.md) for more information.
+ - We now support [MaskFeat](https://arxiv.org/abs/2112.09133). See [`projects/maskfeat`](./projects/maskfeat/README.md) for more information.
+ - We now support [MViTv2](https://arxiv.org/abs/2104.11227.pdf) in PySlowFast. See [`projects/mvitv2`](./projects/mvitv2/README.md) for more information.
+ - We now support [A Large-Scale Study on Unsupervised Spatiotemporal Representation Learning](https://arxiv.org/abs/2104.14558). See [`projects/contrastive_ssl`](./projects/contrastive_ssl/README.md) for more information.
+ - We now support [Multiscale Vision Transformers](https://arxiv.org/abs/2104.11227.pdf) on Kinetics and ImageNet. See [`projects/mvit`](./projects/mvit/README.md) for more information.
  - We now support [PyTorchVideo](https://github.com/facebookresearch/pytorchvideo) models and datasets. See [`projects/pytorchvideo`](./projects/pytorchvideo/README.md) for more information.
  - We now support [X3D Models](https://arxiv.org/abs/2004.04730). See [`projects/x3d`](./projects/x3d/README.md) for more information.
  - We now support [Multigrid Training](https://arxiv.org/abs/1912.00998) for efficiently training video models. See [`projects/multigrid`](./projects/multigrid/README.md) for more information.

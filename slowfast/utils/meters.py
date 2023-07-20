@@ -83,6 +83,12 @@ class AVAMeter(object):
         )
         self.output_dir = cfg.OUTPUT_DIR
 
+        self.min_top1_err = 100.0
+        self.min_top5_err = 100.0
+        self.stats = {}
+        self.stats["top1_acc"] = 100.0
+        self.stats["top5_acc"] = 100.0
+
     def log_iter_stats(self, cur_epoch, cur_iter):
         """
         Log the stats.
@@ -99,7 +105,9 @@ class AVAMeter(object):
         if self.mode == "train":
             stats = {
                 "_type": "{}_iter".format(self.mode),
-                "cur_epoch": "{}".format(cur_epoch + 1),
+                "cur_epoch": "{}/{}".format(
+                    cur_epoch + 1, self.cfg.SOLVER.MAX_EPOCH
+                ),
                 "cur_iter": "{}".format(cur_iter + 1),
                 "eta": eta,
                 "dt": self.iter_timer.seconds(),
@@ -112,7 +120,9 @@ class AVAMeter(object):
         elif self.mode == "val":
             stats = {
                 "_type": "{}_iter".format(self.mode),
-                "cur_epoch": "{}".format(cur_epoch + 1),
+                "cur_epoch": "{}/{}".format(
+                    cur_epoch + 1, self.cfg.SOLVER.MAX_EPOCH
+                ),
                 "cur_iter": "{}".format(cur_iter + 1),
                 "eta": eta,
                 "dt": self.iter_timer.seconds(),
@@ -207,7 +217,13 @@ class AVAMeter(object):
         )
         if log:
             stats = {"mode": self.mode, "map": self.full_map}
-            logging.log_json_stats(stats)
+            logging.log_json_stats(stats, self.output_dir)
+
+        map_str = "{:.{prec}f}".format(self.full_map * 100.0, prec=2)
+
+        self.min_top1_err = self.full_map
+        self.stats["top1_acc"] = map_str
+        self.stats["top5_acc"] = map_str
 
     def log_epoch_stats(self, cur_epoch):
         """
@@ -225,7 +241,7 @@ class AVAMeter(object):
                 "gpu_mem": "{:.2f}G".format(misc.gpu_mem_usage()),
                 "RAM": "{:.2f}/{:.2f}G".format(*misc.cpu_mem_usage()),
             }
-            logging.log_json_stats(stats)
+            logging.log_json_stats(stats, self.output_dir)
 
 
 class TestMeter(object):
@@ -370,25 +386,25 @@ class TestMeter(object):
         ks (tuple): list of top-k values for topk_accuracies. For example,
             ks = (1, 5) correspods to top-1 and top-5 accuracy.
         """
-        if not all(self.clip_count == self.num_clips):
+        clip_check = self.clip_count == self.num_clips
+        if not all(clip_check):
             logger.warning(
-                "clip count {} ~= num clips {}".format(
-                    ", ".join(
-                        [
-                            "{}: {}".format(i, k)
-                            for i, k in enumerate(self.clip_count.tolist())
-                        ]
-                    ),
+                "clip count Ids={} = {} (should be {})".format(
+                    np.argwhere(~clip_check),
+                    self.clip_count[~clip_check],
                     self.num_clips,
                 )
             )
 
         self.stats = {"split": "test_final"}
         if self.multi_label:
-            map = get_map(
+            mean_ap = get_map(
                 self.video_preds.cpu().numpy(), self.video_labels.cpu().numpy()
             )
-            self.stats["map"] = map
+            map_str = "{:.{prec}f}".format(mean_ap * 100.0, prec=2)
+            self.stats["map"] = map_str
+            self.stats["top1_acc"] = map_str
+            self.stats["top5_acc"] = map_str
         else:
             k = min(self.num_cls,5)  # in  case there are less than 5 class
             ks = (1,k)
@@ -401,6 +417,7 @@ class TestMeter(object):
             ]
             assert len({len(ks), len(topks)}) == 1
             for k, topk in zip(ks, topks):
+                # self.stats["top{}_acc".format(k)] = topk.cpu().numpy()
                 self.stats["top{}_acc".format(k)] = "{:.{prec}f}".format(
                     topk, prec=2
                 )
@@ -445,11 +462,50 @@ class ScalarMeter(object):
         """
         return np.median(self.deque)
 
+    def get_current_value(self):
+        return self.deque[-1]
+
     def get_win_avg(self):
         """
         Calculate the current average value of the deque.
         """
         return np.mean(self.deque)
+
+    def get_global_avg(self):
+        """
+        Calculate the global mean value.
+        """
+        return self.total / self.count
+
+
+class ListMeter(object):
+    def __init__(self, list_size):
+        """
+        Args:
+            list_size (int): size of the list.
+        """
+        self.list = np.zeros(list_size)
+        self.total = np.zeros(list_size)
+        self.count = 0
+
+    def reset(self):
+        """
+        Reset the meter.
+        """
+        self.list = np.zeros_like(self.list)
+        self.total = np.zeros_like(self.total)
+        self.count = 0
+
+    def add_value(self, value):
+        """
+        Add a new list value to the meter.
+        """
+        self.list = np.array(value)
+        self.count += 1
+        self.total += self.list
+
+    def get_value(self):
+        return self.list
 
     def get_global_avg(self):
         """
@@ -478,6 +534,7 @@ class TrainMeter(object):
         self.loss = ScalarMeter(cfg.LOG_PERIOD)
         self.loss_total = 0.0
         self.lr = None
+        self.grad_norm = None
         # Current minibatch errors (smoothed over a window).
         self.mb_top1_err = ScalarMeter(cfg.LOG_PERIOD)
         self.mb_top5_err = ScalarMeter(cfg.LOG_PERIOD)
@@ -486,6 +543,7 @@ class TrainMeter(object):
         self.num_top5_mis = 0
         self.num_samples = 0
         self.output_dir = cfg.OUTPUT_DIR
+        self.multi_loss = None
 
     def reset(self):
         """
@@ -494,11 +552,14 @@ class TrainMeter(object):
         self.loss.reset()
         self.loss_total = 0.0
         self.lr = None
+        self.grad_norm = None
         self.mb_top1_err.reset()
         self.mb_top5_err.reset()
         self.num_top1_mis = 0
         self.num_top5_mis = 0
         self.num_samples = 0
+        if self.multi_loss is not None:
+            self.multi_loss.reset()
 
     def iter_tic(self):
         """
@@ -518,7 +579,9 @@ class TrainMeter(object):
         self.data_timer.pause()
         self.net_timer.reset()
 
-    def update_stats(self, top1_err, top5_err, loss, lr, mb_size):
+    def update_stats(
+        self, top1_err, top5_err, loss, lr, grad_norm, mb_size, multi_loss=None
+    ):
         """
         Update the current stats.
         Args:
@@ -527,9 +590,11 @@ class TrainMeter(object):
             loss (float): loss value.
             lr (float): learning rate.
             mb_size (int): mini batch size.
+            multi_loss (list): a list of values for multi-tasking losses.
         """
         self.loss.add_value(loss)
         self.lr = lr
+        self.grad_norm = grad_norm
         self.loss_total += loss * mb_size
         self.num_samples += mb_size
 
@@ -540,6 +605,26 @@ class TrainMeter(object):
             # Aggregate stats
             self.num_top1_mis += top1_err * mb_size
             self.num_top5_mis += top5_err * mb_size
+        if multi_loss:
+            if self.multi_loss is None:
+                self.multi_loss = ListMeter(len(multi_loss))
+            self.multi_loss.add_value(multi_loss)
+        if (
+            self._cfg.TRAIN.KILL_LOSS_EXPLOSION_FACTOR > 0.0
+            and len(self.loss.deque) > 6
+        ):
+            prev_loss = 0.0
+            for i in range(2, 7):
+                prev_loss += self.loss.deque[len(self.loss.deque) - i]
+            if (
+                loss
+                > self._cfg.TRAIN.KILL_LOSS_EXPLOSION_FACTOR * prev_loss / 5.0
+            ):
+                raise RuntimeError(
+                    "ERROR: Got Loss explosion of {} {}".format(
+                        loss, datetime.datetime.now()
+                    )
+                )
 
     def log_iter_stats(self, cur_epoch, cur_iter):
         """
@@ -555,7 +640,9 @@ class TrainMeter(object):
         )
         eta = str(datetime.timedelta(seconds=int(eta_sec)))
         stats = {
-            "_type": "train_iter",
+            "_type": "train_iter_{}".format(
+                "ssl" if self._cfg.TASK == "ssl" else ""
+            ),
             "epoch": "{}/{}".format(cur_epoch + 1, self._cfg.SOLVER.MAX_EPOCH),
             "iter": "{}/{}".format(cur_iter + 1, self.epoch_iters),
             "dt": self.iter_timer.seconds(),
@@ -564,11 +651,16 @@ class TrainMeter(object):
             "eta": eta,
             "loss": self.loss.get_win_median(),
             "lr": self.lr,
+            "grad_norm": self.grad_norm,
             "gpu_mem": "{:.2f}G".format(misc.gpu_mem_usage()),
         }
         if not self._cfg.DATA.MULTI_LABEL:
             stats["top1_err"] = self.mb_top1_err.get_win_median()
             stats["top5_err"] = self.mb_top5_err.get_win_median()
+        if self.multi_loss is not None:
+            loss_list = self.multi_loss.get_value()
+            for idx, loss in enumerate(loss_list):
+                stats["loss_" + str(idx)] = loss
         logging.log_json_stats(stats)
 
     def log_epoch_stats(self, cur_epoch):
@@ -582,13 +674,16 @@ class TrainMeter(object):
         )
         eta = str(datetime.timedelta(seconds=int(eta_sec)))
         stats = {
-            "_type": "train_epoch",
+            "_type": "train_epoch{}".format(
+                "_ssl" if self._cfg.TASK == "ssl" else ""
+            ),
             "epoch": "{}/{}".format(cur_epoch + 1, self._cfg.SOLVER.MAX_EPOCH),
             "dt": self.iter_timer.seconds(),
             "dt_data": self.data_timer.seconds(),
             "dt_net": self.net_timer.seconds(),
             "eta": eta,
             "lr": self.lr,
+            "grad_norm": self.grad_norm,
             "gpu_mem": "{:.2f}G".format(misc.gpu_mem_usage()),
             "RAM": "{:.2f}/{:.2f}G".format(*misc.cpu_mem_usage()),
         }
@@ -599,7 +694,11 @@ class TrainMeter(object):
             stats["top1_err"] = top1_err
             stats["top5_err"] = top5_err
             stats["loss"] = avg_loss
-        logging.log_json_stats(stats)
+        if self.multi_loss is not None:
+            avg_loss_list = self.multi_loss.get_global_avg()
+            for idx, loss in enumerate(avg_loss_list):
+                stats["loss_" + str(idx)] = loss
+        logging.log_json_stats(stats, self.output_dir)
 
 
 class ValMeter(object):
@@ -637,6 +736,8 @@ class ValMeter(object):
         Reset the Meter.
         """
         self.iter_timer.reset()
+        self.data_timer.reset()
+        self.net_timer.reset()
         self.mb_top1_err.reset()
         self.mb_top5_err.reset()
         self.num_top1_mis = 0
@@ -700,7 +801,9 @@ class ValMeter(object):
         eta_sec = self.iter_timer.seconds() * (self.max_iter - cur_iter - 1)
         eta = str(datetime.timedelta(seconds=int(eta_sec)))
         stats = {
-            "_type": "val_iter",
+            "_type": "val_iter{}".format(
+                "_ssl" if self._cfg.TASK == "ssl" else ""
+            ),
             "epoch": "{}/{}".format(cur_epoch + 1, self._cfg.SOLVER.MAX_EPOCH),
             "iter": "{}/{}".format(cur_iter + 1, self.max_iter),
             "time_diff": self.iter_timer.seconds(),
@@ -719,7 +822,9 @@ class ValMeter(object):
             cur_epoch (int): the number of current epoch.
         """
         stats = {
-            "_type": "val_epoch",
+            "_type": "val_epoch{}".format(
+                "_ssl" if self._cfg.TASK == "ssl" else ""
+            ),
             "epoch": "{}/{}".format(cur_epoch + 1, self._cfg.SOLVER.MAX_EPOCH),
             "time_diff": self.iter_timer.seconds(),
             "gpu_mem": "{:.2f}G".format(misc.gpu_mem_usage()),
@@ -741,7 +846,7 @@ class ValMeter(object):
             stats["min_top1_err"] = self.min_top1_err
             stats["min_top5_err"] = self.min_top5_err
 
-        logging.log_json_stats(stats)
+        logging.log_json_stats(stats, self.output_dir)
 
 
 def get_map(preds, labels):
