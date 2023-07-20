@@ -646,7 +646,7 @@ def Ptvssv2(cfg, mode):
     )
 
 @DATASET_REGISTRY.register()
-def Ptvfishbase(cfg, mode):
+def Ptvfishbase2(cfg, mode):
     """
     Construct the Fishbase video loader with a directory, each directory is split into modes ('train', 'val', 'test')
     and inside each mode are subdirectories for each label class.
